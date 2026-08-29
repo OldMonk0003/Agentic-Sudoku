@@ -431,22 +431,55 @@ returns.
 
 ### Tests for User Story 6 (write first, watch fail)
 
-- [ ] T100 [P] [US6] Write `tests/unit/persistence.roundtrip.test.ts` asserting a session serialises and restores with identical cells, candidates, origins, difficulty, and elapsed time
-- [ ] T101 [P] [US6] Write `tests/unit/persistence.resilience.test.ts` asserting an unknown `schemaVersion`, corrupt payload, and a throwing storage backend each yield a fresh puzzle with no thrown error (FR-042, FR-044)
-- [ ] T102 [P] [US6] Write `tests/unit/persistence.quarantine.test.ts` asserting the persisted payload never contains a complete 81-digit solution grid
-- [ ] T103 [P] [US6] Write `tests/integration/persistence.spec.ts` covering reload mid-game and the blocked-storage path
+- [X] T100 [P] [US6] Write `tests/unit/persistence.roundtrip.test.ts` asserting a session serialises and restores with identical cells, candidates, origins, difficulty, and elapsed time
+- [X] T101 [P] [US6] Write `tests/unit/persistence.resilience.test.ts` asserting an unknown `schemaVersion`, corrupt payload, and a throwing storage backend each yield a fresh puzzle with no thrown error (FR-042, FR-044)
+- [X] T102 [P] [US6] Write `tests/unit/persistence.quarantine.test.ts` asserting the persisted payload never contains a complete 81-digit solution grid
+- [X] T103 [P] [US6] Write `tests/integration/persistence.spec.ts` covering reload mid-game and the blocked-storage path
 
 ### Implementation for User Story 6
 
-- [ ] T104 [P] [US6] Create `src/state/persistence.ts` with the `PersistedSession` v1 shape from [data-model.md](./data-model.md)
-- [ ] T105 [US6] Implement `serialiseSession` in `src/state/persistence.ts`, excluding history, selection, input mode, derived sets, and the solution
-- [ ] T106 [US6] Implement `restoreSession` in `src/state/persistence.ts` with version checking and safe discard on any failure
-- [ ] T107 [US6] Subscribe persistence to the store with a ~250 ms debounce in `src/state/persistence.ts`
-- [ ] T108 [US6] Load any saved session at startup in `src/ui/GameScreen.tsx`, falling back to a fresh puzzle
-- [ ] T109 [US6] Add a one-time unobtrusive notice in `src/ui/GameScreen.tsx` when storage is unavailable (FR-042)
-- [ ] T110 [US6] Guard every storage call in `src/state/persistence.ts` with try/catch so a failure never reaches a dispatch
+- [X] T104 [P] [US6] Create `src/state/persistence.ts` with the `PersistedSession` v1 shape from [data-model.md](./data-model.md)
+- [X] T105 [US6] Implement `serialiseSession` in `src/state/persistence.ts`, excluding history, selection, input mode, derived sets, and the solution
+- [X] T106 [US6] Implement `restoreSession` in `src/state/persistence.ts` with version checking and safe discard on any failure
+- [X] T107 [US6] Subscribe persistence to the store with a ~250 ms debounce in `src/state/persistence.ts`
+- [X] T108 [US6] Load any saved session at startup in `src/ui/GameScreen.tsx`, falling back to a fresh puzzle
+- [X] T109 [US6] Add a one-time unobtrusive notice in `src/ui/GameScreen.tsx` when storage is unavailable (FR-042)
+- [X] T110 [US6] Guard every storage call in `src/state/persistence.ts` with try/catch so a failure never reaches a dispatch
 
-**Checkpoint**: Slice 6 complete — all six user stories work independently.
+**Checkpoint**: ✅ **SLICE 6 COMPLETE** (2026-08-29). 237 unit tests and 59 browser tests green, lint
+and typecheck clean. **All six user stories are now implemented.**
+
+Verified live: placed a digit and two pencil notes at 00:09, reloaded, and got back the same puzzle
+with the player digit still in player ink, both candidates intact, and the clock continuing from
+where it left off rather than restarting.
+
+Inspected the stored payload directly — 622 bytes, exactly the v1 schema:
+
+| Check | Result |
+|---|---|
+| Fields | `schemaVersion, puzzleString, difficulty, values, origins, candidates, elapsedMs, status` |
+| Complete 81-digit grid | absent |
+| History / selection | absent, as designed |
+| Origins encoding | `c`/`p`/`a`, so agent provenance survives a reload for feature 002 |
+
+Notes from implementation:
+
+- **Stored data is treated as untrusted input, not as our own data.** It can be hand-edited,
+  truncated, or written by an older build. Every field is validated on read, and a tampered payload is
+  additionally re-checked against Principle IV's uniqueness rule and re-rated — a restored puzzle must
+  earn its difficulty the same way a generated one does. Fourteen resilience cases cover unknown schema
+  versions, malformed JSON, bad field shapes, and a backend that throws on every call.
+- **Restored clues are cross-checked against the puzzle they claim to belong to.** A payload whose
+  `origins` disagree with its `puzzleString` is discarded rather than producing a board with
+  uneditable cells in the wrong places.
+- **`serialiseSession` returns a boolean and never throws**, so a full or blocked store cannot
+  propagate into a dispatch. The failure notice fires at most once (FR-042).
+- **Storage is injectable**, so the whole persistence layer is tested in a plain `node` environment
+  with no DOM — consistent with the state layer staying headless for feature 002.
+- **`loadSession` is the only action that replaces state wholesale**, and it is safe precisely because
+  `restoreSession` discards anything malformed rather than partially applying it.
+
+Informational bundle reading: 188.7 KB gzipped.
 
 ---
 

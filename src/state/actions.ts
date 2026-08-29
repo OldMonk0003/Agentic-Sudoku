@@ -22,6 +22,7 @@ export type Action =
   | { type: 'newPuzzle'; difficulty: Difficulty; seed: number }
   | { type: 'beginGenerating'; difficulty: Difficulty }
   | { type: 'loadPuzzle'; puzzle: Puzzle }
+  | { type: 'loadSession'; session: GameSession }
   | { type: 'selectCell'; coord: Coord }
   | { type: 'moveSelection'; direction: Direction }
   | { type: 'setInputMode'; mode: InputMode }
@@ -41,6 +42,8 @@ export const newPuzzle = (difficulty: Difficulty, seed: number): Action =>
 export const beginGenerating = (difficulty: Difficulty): Action =>
   ({ type: 'beginGenerating', difficulty });
 export const loadPuzzle = (puzzle: Puzzle): Action => ({ type: 'loadPuzzle', puzzle });
+/** Adopt a whole restored session. The only action that replaces state wholesale. */
+export const loadSession = (session: GameSession): Action => ({ type: 'loadSession', session });
 export const selectCell = (coord: Coord): Action => ({ type: 'selectCell', coord });
 export const moveSelection = (direction: Direction): Action => ({ type: 'moveSelection', direction });
 export const setInputMode = (mode: InputMode): Action => ({ type: 'setInputMode', mode });
@@ -56,7 +59,7 @@ export const resume = (): Action => ({ type: 'resume' });
 export const tick = (deltaMs: number): Action => ({ type: 'tick', deltaMs });
 
 export const ACTION_TYPES: ReadonlySet<string> = new Set<Action['type']>([
-  'newPuzzle', 'beginGenerating', 'loadPuzzle', 'selectCell', 'moveSelection',
+  'newPuzzle', 'beginGenerating', 'loadPuzzle', 'loadSession', 'selectCell', 'moveSelection',
   'setInputMode', 'toggleInputMode', 'enterDigit', 'toggleCandidate', 'eraseCell',
   'undo', 'pause', 'resume', 'tick',
 ]);
@@ -123,6 +126,11 @@ export function reduce(session: GameSession, action: Action): ReducerOutcome {
 
     case 'loadPuzzle':
       return commit(loadInto(session, action.puzzle));
+
+    case 'loadSession':
+      // Restored sessions arrive already validated by persistence.restoreSession,
+      // which discards anything malformed rather than partially applying it.
+      return commit(action.session);
 
     case 'selectCell': {
       if (!isValidCoord(action.coord)) return reject('out-of-range');

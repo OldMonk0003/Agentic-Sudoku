@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Board } from './Board';
 import { Keypad } from './Keypad';
 import { DifficultySelect } from './DifficultySelect';
@@ -8,8 +8,9 @@ import { ModeToggle } from './ModeToggle';
 import { Timer } from './Timer';
 import { Controls } from './Controls';
 import { CompletionBanner } from './CompletionBanner';
-import { resume } from '@/state/actions';
+import { resume, loadSession } from '@/state/actions';
 import { store } from '@/state/store';
+import { attachPersistence, restoreSession } from '@/state/persistence';
 import { requestPuzzle } from './puzzleLoader';
 import { useSelector, useSession } from './useStore';
 
@@ -23,13 +24,37 @@ export function GameScreen() {
   const session = useSession();
   const hasPuzzle = useSelector((s) => s.puzzle !== null);
   const paused = session.status === 'paused';
+  const [storageBlocked, setStorageBlocked] = useState(false);
 
+  // Restore a saved session, or generate a fresh puzzle. Runs once: a failed
+  // restore must fall through to a playable board, never an error state (FR-044).
   useEffect(() => {
-    if (!hasPuzzle) requestPuzzle('easy');
+    if (hasPuzzle) return;
+
+    const restored = restoreSession();
+    if (restored) store.dispatch(loadSession(restored));
+    else requestPuzzle('easy');
   }, [hasPuzzle]);
+
+  // Save as the session changes, debounced. onFailure fires at most once, so the
+  // player is told a single time and never again (FR-042).
+  useEffect(
+    () => attachPersistence(store, { onFailure: () => setStorageBlocked(true) }),
+    [],
+  );
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col items-center gap-6 px-4 py-8 sm:py-12">
+      {storageBlocked && (
+        <p
+          data-testid="storage-notice"
+          role="status"
+          className="w-full max-w-[min(92vw,34rem)] rounded-sm border border-line-hairline bg-surface px-3 py-2 text-center text-xs text-ink-note"
+        >
+          Progress will not be saved on this device.
+        </p>
+      )}
+
       <header className="flex w-full flex-col items-center gap-4">
         <h1 className="text-lg font-medium tracking-[0.2em] text-ink-clue uppercase">Agentic Sudoku</h1>
         <div className="flex flex-wrap items-center justify-center gap-3">
