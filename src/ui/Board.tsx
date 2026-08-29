@@ -44,6 +44,10 @@ export function Board() {
 
   const onSelect = (index: CellIndex) => store.dispatch(selectCell(toCoord(index)));
 
+  // Exactly one cell is tabbable: the selection, or the first cell when there is
+  // none. Otherwise Tab skips the board entirely (FR-046, SC-005).
+  const tabbableIndex = session.selection === null ? 0 : toIndex(session.selection);
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const { key } = event;
 
@@ -121,6 +125,7 @@ export function Board() {
               tier={tiers[index]!}
               conflict={conflicts.has(index)}
               selected={session.selection !== null && toIndex(session.selection) === index}
+              tabbable={index === tabbableIndex}
               onSelect={onSelect}
             />
           ))}

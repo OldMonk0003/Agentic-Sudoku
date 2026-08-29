@@ -23,6 +23,12 @@ interface CellProps {
   readonly tier: HighlightTier;
   readonly conflict: boolean;
   readonly selected: boolean;
+  /**
+   * Roving tabindex: exactly ONE cell is in the tab order at any time. When
+   * nothing is selected that is the first cell, otherwise it is the selection.
+   * Without this the whole board is unreachable by keyboard on a fresh load.
+   */
+  readonly tabbable: boolean;
   readonly onSelect: (index: CellIndex) => void;
 }
 
@@ -91,7 +97,7 @@ function describe(row: number, col: number, cell: CellData, conflict: boolean): 
   return `${where}, ${what}${conflict ? ', conflict' : ''}`;
 }
 
-export function Cell({ index, colIndex, cell, tier, conflict, selected, onSelect }: CellProps) {
+export function Cell({ index, colIndex, cell, tier, conflict, selected, tabbable, onSelect }: CellProps) {
   const { row, col } = toCoord(index);
   const origin = cell.value === null ? 'empty' : cell.origin;
 
@@ -106,7 +112,7 @@ export function Cell({ index, colIndex, cell, tier, conflict, selected, onSelect
       role="gridcell"
       aria-label={describe(row, col, cell, conflict)}
       aria-selected={selected}
-      tabIndex={selected ? 0 : -1}
+      tabIndex={tabbable ? 0 : -1}
       aria-colindex={colIndex}
       data-index={index}
       data-origin={origin}
@@ -114,6 +120,10 @@ export function Cell({ index, colIndex, cell, tier, conflict, selected, onSelect
       data-conflict={conflict ? 'true' : 'false'}
       data-selected={selected ? 'true' : 'false'}
       onClick={() => onSelect(index)}
+      // Focus and selection move together. A keyboard user who tabs into the
+      // board must land on a SELECTED cell, or their next keystroke goes
+      // nowhere -- which is exactly what the audit caught (FR-046, SC-005).
+      onFocus={() => onSelect(index)}
       className={[
         'relative flex items-center justify-center',
         'aspect-square select-none',

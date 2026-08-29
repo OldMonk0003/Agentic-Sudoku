@@ -28,6 +28,7 @@ function renderCell(tier: HighlightTier, cell: CellData = emptyCell, selected = 
       tier={tier}
       conflict={conflict}
       selected={selected}
+      tabbable={selected}
       onSelect={() => {}}
     />,
   );

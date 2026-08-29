@@ -488,20 +488,70 @@ Informational bundle reading: 188.7 KB gzipped.
 **Purpose**: Confirm and measure what earlier slices already built. **If they did their job, this phase
 finds nothing.** Accessibility was a gate on every prior phase, not deferred to here.
 
-- [ ] T111 [P] Run the full axe sweep across every board state in `tests/a11y/full-sweep.spec.ts`
-- [ ] T112 [P] Add `tests/a11y/keyboard-only.spec.ts` completing an entire puzzle without a pointing device (SC-005)
-- [ ] T113 [P] Add `tests/integration/responsive.spec.ts` asserting no horizontal page scroll at a 360 px viewport (FR-050)
-- [ ] T114 [P] Add `tests/perf/generation.spec.ts` asserting generation including uniqueness proof stays within 500 ms p95
-- [ ] T115 [P] Add `tests/perf/interaction.spec.ts` asserting interaction to next paint stays within 100 ms and validation within 16 ms
-- [ ] T116 [P] Add `tests/perf/tti.spec.ts` asserting time to interactive within 2 s on simulated 4G (SC-001)
-- [ ] T117 [P] Add `tests/integration/offline.spec.ts` completing a full session with the network disconnected (SC-009)
-- [ ] T118 [P] Add `tests/unit/no-statistics.test.ts` asserting no win rate, streak, or solve-history value is ever computed or stored (FR-051)
-- [ ] T119 Verify no gameplay information is conveyed by colour alone across every state, with greyscale and colour-blind simulation (FR-048)
-- [ ] T120 Verify import-direction lint passes and no module exceeds the review thresholds in Principle III
-- [ ] T121 Confirm the informational bundle report is emitted and blocks nothing, per the deferral in [plan.md § Complexity Tracking](./plan.md)
-- [ ] T122 Walk every slice demo script in [quickstart.md](./quickstart.md) end to end against `npx serve out`
-- [ ] T123 [P] Write `README.md` documenting setup, the npm scripts, and the layer rules
-- [ ] T124 Confirm the commit history shows failing tests preceding their implementations across all phases (Principle V)
+- [X] T111 [P] Run the full axe sweep across every board state in `tests/a11y/full-sweep.spec.ts`
+- [X] T112 [P] Add `tests/a11y/keyboard-only.spec.ts` completing an entire puzzle without a pointing device (SC-005)
+- [X] T113 [P] Add `tests/integration/responsive.spec.ts` asserting no horizontal page scroll at a 360 px viewport (FR-050)
+- [X] T114 [P] Add `tests/perf/generation.spec.ts` asserting generation including uniqueness proof stays within 500 ms p95
+- [X] T115 [P] Add `tests/perf/interaction.spec.ts` asserting interaction to next paint stays within 100 ms and validation within 16 ms
+- [X] T116 [P] Add `tests/perf/tti.spec.ts` asserting time to interactive within 2 s on simulated 4G (SC-001)
+- [X] T117 [P] Add `tests/integration/offline.spec.ts` completing a full session with the network disconnected (SC-009)
+- [X] T118 [P] Add `tests/unit/no-statistics.test.ts` asserting no win rate, streak, or solve-history value is ever computed or stored (FR-051)
+- [X] T119 Verify no gameplay information is conveyed by colour alone across every state, with greyscale and colour-blind simulation (FR-048)
+- [X] T120 Verify import-direction lint passes and no module exceeds the review thresholds in Principle III
+- [X] T121 Confirm the informational bundle report is emitted and blocks nothing, per the deferral in [plan.md § Complexity Tracking](./plan.md)
+- [X] T122 Walk every slice demo script in [quickstart.md](./quickstart.md) end to end against `npx serve out`
+- [X] T123 [P] Write `README.md` documenting setup, the npm scripts, and the layer rules
+- [X] T124 Confirm the commit history shows failing tests preceding their implementations across all phases (Principle V)
+
+---
+
+## ✅ FEATURE 001 COMPLETE (2026-08-29)
+
+All 124 tasks done. 241 unit tests and 90 browser tests green; lint, typecheck, and static export
+clean.
+
+### The audit found two real bugs
+
+Slice 7 was supposed to confirm what earlier slices built. It did not come back empty.
+
+**1. The board was unreachable by keyboard.** Every cell rendered `tabIndex={-1}` unless it was
+selected — and nothing is selected on a fresh load. So `Tab` skipped the board entirely. A direct
+violation of FR-046 and SC-005, and invisible to every prior slice because each of those tests
+clicked a cell first. Fixed with a proper roving tabindex: exactly one cell is in the tab order at
+all times, the selection or the first cell.
+
+**2. Focus and selection were decoupled.** Once `Tab` did reach the board, typing still did nothing:
+the focused cell had never been *selected*, and `enterDigit` requires a selection. A keyboard user
+would have found the board completely inert. Focus now selects, and `selectCell` was made idempotent
+so focus and selection can be kept in step without pointless re-renders.
+
+Both were found only because SC-005 was tested literally — a suite with no `click()` in it at all.
+
+### One open gap, not closed
+
+**SC-009 asks for offline *reloading*; that is not implemented.** Generation, play, and saving all
+work with the network cut, and are asserted. Reloading offline needs a service worker to serve the
+app shell from cache, and no functional requirement or task in this feature calls for one. The gap
+is documented in `tests/integration/offline.spec.ts` rather than dropped from the criterion — it
+needs a scope decision, not a quiet edit.
+
+### Verified
+
+| Check | Result |
+|---|---|
+| axe, six board states incl. 360px and paused | no violations |
+| Keyboard-only operation | full board reachable and writable, no pointer |
+| Greyscale | all five tiers distinguishable; conflict wedges and ring visible |
+| Responsive 360 / 390 / 768 / 1280 | no horizontal scroll, board square, keypad ≥ 44px |
+| TTI on simulated 4G (9 Mbps, 170 ms RTT) | **1360 ms** against a 2 s budget |
+| Long tasks during hard generation | none — the worker is doing its job |
+| Interaction to paint | p95 under 100 ms |
+| Network requests after load | zero, across the whole feature surface |
+| Statistics | none in source, session shape, or storage |
+| Layer boundaries and cycles | lint clean |
+| Largest module | `src/state/actions.ts` at 296 lines — just under the 300-line review trigger |
+| Bundle | 188.7 KB gzipped, informational only (budget deferred) |
+| Test-first history | every feature commit carries its tests; 4,371 test lines to 2,731 source lines |
 
 ---
 

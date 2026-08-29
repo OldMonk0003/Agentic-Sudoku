@@ -134,6 +134,16 @@ export function reduce(session: GameSession, action: Action): ReducerOutcome {
 
     case 'selectCell': {
       if (!isValidCoord(action.coord)) return reject('out-of-range');
+      // Report "no change" when the cell is already selected. Focus and
+      // selection are kept in step by the View, so an unconditional new object
+      // here would re-render on every focus event for no reason.
+      if (
+        session.selection !== null &&
+        session.selection.row === action.coord.row &&
+        session.selection.col === action.coord.col
+      ) {
+        return commit(null);
+      }
       return commit({ ...session, selection: { ...action.coord } });
     }
 
