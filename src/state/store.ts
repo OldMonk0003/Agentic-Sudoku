@@ -1,4 +1,5 @@
-import type { DispatchResult, GameSession, InputMode } from './types';
+import { reduce, ACTION_TYPES, type Action } from './actions';
+import type { DispatchResult, GameSession } from './types';
 
 /**
  * The framework-agnostic store.
@@ -6,16 +7,12 @@ import type { DispatchResult, GameSession, InputMode } from './types';
  * This file must never import React, touch the DOM, or read a timer. That is not
  * stylistic: constitution Principle I requires the WebMCP tool surface (feature
  * 002) to be registered outside the component tree and enumerable with no DOM
- * mounted. State reachable only through a React hook makes that impossible, which
- * is why `webmcp-react` was rejected and why this store exists.
+ * mounted. State reachable only through a React hook makes that impossible,
+ * which is why `webmcp-react` was rejected and why this store exists.
  *
- * Every mutation passes through `dispatch`. There is no other write path.
- * Every rejection is a RETURNED value -- dispatch never throws.
+ * Every mutation passes through `dispatch`. There is no other write path, and
+ * every rejection is a RETURNED value -- dispatch never throws.
  */
-
-export type Action =
-  | { type: 'setInputMode'; mode: InputMode }
-  | { type: 'toggleInputMode' };
 
 export interface Store {
   getState(): GameSession;
@@ -23,30 +20,7 @@ export interface Store {
   dispatch(action: Action): DispatchResult;
 }
 
-type Reducer = (session: GameSession, action: Action) => GameSession | null;
-
-/**
- * Phase 2 ships the skeleton plus the two mode actions. Every remaining action
- * is registered here by its own user story, so no story has to reopen this file's
- * dispatch plumbing.
- */
-const baseReducer: Reducer = (session, action) => {
-  switch (action.type) {
-    case 'setInputMode':
-      if (session.inputMode === action.mode) return null;
-      return { ...session, inputMode: action.mode };
-
-    case 'toggleInputMode':
-      return { ...session, inputMode: session.inputMode === 'normal' ? 'notes' : 'normal' };
-
-    default:
-      return null;
-  }
-};
-
-const KNOWN_ACTIONS = new Set<string>(['setInputMode', 'toggleInputMode']);
-
-export function createStore(initial: GameSession, reducer: Reducer = baseReducer): Store {
+export function createStore(initial: GameSession): Store {
   let state = initial;
   const listeners = new Set<() => void>();
 
@@ -61,21 +35,22 @@ export function createStore(initial: GameSession, reducer: Reducer = baseReducer
     },
 
     dispatch(action: Action): DispatchResult {
-      // Hostile input is a returned rejection, never an exception (Principle I,
-      // established here so agent and human paths get identical treatment).
+      // Hostile input is a returned rejection, never an exception. Established
+      // here so the agent and human paths get identical treatment (Principle I).
       if (!action || typeof action !== 'object' || typeof action.type !== 'string') {
         return { ok: false, reason: 'unknown-action' };
       }
-      if (!KNOWN_ACTIONS.has(action.type)) {
+      if (!ACTION_TYPES.has(action.type)) {
         return { ok: false, reason: 'unknown-action' };
       }
 
-      const next = reducer(state, action);
-      if (next === null || next === state) {
+      const outcome = reduce(state, action);
+      if (!outcome.ok) return { ok: false, reason: outcome.reason };
+      if (outcome.session === null || outcome.session === state) {
         return { ok: true, changed: false };
       }
 
-      state = next;
+      state = outcome.session;
       for (const listener of listeners) listener();
       return { ok: true, changed: true };
     },

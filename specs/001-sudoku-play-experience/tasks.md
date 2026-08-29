@@ -112,35 +112,74 @@ mouse and keypad, and reach a completed grid — with no highlighting, notes, ti
 
 ### Tests for User Story 1 (write first, watch fail)
 
-- [ ] T029 [P] [US1] Write `tests/unit/solver.test.ts` asserting `countSolutions` returns 0, 1, and 2 correctly and never exceeds its cap
-- [ ] T030 [P] [US1] Write `tests/property/uniqueness.property.test.ts` using fast-check over ≥10,000 generated puzzles asserting exactly one solution (SC-003)
-- [ ] T031 [P] [US1] Write `tests/unit/rating.test.ts` asserting difficulty derives from techniques required and never from clue count
-- [ ] T032 [P] [US1] Write `tests/unit/generate.test.ts` asserting a puzzle whose uniqueness check fails is discarded and redrawn, and that `puzzleString` round-trips to the same clues
-- [ ] T033 [P] [US1] Write `tests/unit/solution-quarantine.test.ts` asserting no value returned by `generatePuzzle` and no serialised store state contains a complete 81-digit grid
-- [ ] T034 [P] [US1] Write `tests/unit/actions.entry.test.ts` covering `selectCell`, `moveSelection` (no wrap at edges), `enterDigit`, and `eraseCell`, including that every clue-targeting action returns `ok: false` with reason `cell-is-clue` and changes nothing
-- [ ] T035 [P] [US1] Write `tests/unit/store.headless.test.ts` driving a full puzzle to completion through `dispatch` alone with **no DOM mounted** (Principle I prerequisite for feature 002)
-- [ ] T036 [P] [US1] Write `tests/component/Keypad.test.tsx` asserting keypad and keyboard dispatch identical actions (FR-020)
-- [ ] T037 [P] [US1] Write `tests/integration/play.spec.ts` covering the US1 acceptance scenarios end to end
-- [ ] T038 [P] [US1] Write `tests/a11y/board.spec.ts` asserting axe passes, the board exposes grid semantics, and selection moves programmatic focus
+- [X] T029 [P] [US1] Write `tests/unit/solver.test.ts` asserting `countSolutions` returns 0, 1, and 2 correctly and never exceeds its cap
+- [X] T030 [P] [US1] Write `tests/property/uniqueness.property.test.ts` using fast-check over ≥10,000 generated puzzles asserting exactly one solution (SC-003)
+- [X] T031 [P] [US1] Write `tests/unit/rating.test.ts` asserting difficulty derives from techniques required and never from clue count
+- [X] T032 [P] [US1] Write `tests/unit/generate.test.ts` asserting a puzzle whose uniqueness check fails is discarded and redrawn, and that `puzzleString` round-trips to the same clues
+- [X] T033 [P] [US1] Write `tests/unit/solution-quarantine.test.ts` asserting no value returned by `generatePuzzle` and no serialised store state contains a complete 81-digit grid
+- [X] T034 [P] [US1] Write `tests/unit/actions.entry.test.ts` covering `selectCell`, `moveSelection` (no wrap at edges), `enterDigit`, and `eraseCell`, including that every clue-targeting action returns `ok: false` with reason `cell-is-clue` and changes nothing
+- [X] T035 [P] [US1] Write `tests/unit/store.headless.test.ts` driving a full puzzle to completion through `dispatch` alone with **no DOM mounted** (Principle I prerequisite for feature 002)
+- [X] T036 [P] [US1] Write `tests/component/Keypad.test.tsx` asserting keypad and keyboard dispatch identical actions (FR-020)
+- [X] T037 [P] [US1] Write `tests/integration/play.spec.ts` covering the US1 acceptance scenarios end to end
+- [X] T038 [P] [US1] Write `tests/a11y/board.spec.ts` asserting axe passes, the board exposes grid semantics, and selection moves programmatic focus
 
 ### Implementation for User Story 1
 
-- [ ] T039 [P] [US1] Create `src/engine/solver.ts` with `countSolutions(clues, cap = 2)` and `solve`
-- [ ] T040 [P] [US1] Create `src/engine/techniques/nakedSingle.ts` implementing the `Technique` interface from [contracts/engine-api.md](./contracts/engine-api.md)
-- [ ] T041 [P] [US1] Create `src/engine/techniques/hiddenSingle.ts` implementing the same interface
-- [ ] T042 [US1] Create `src/engine/techniques/index.ts` registering techniques in band order (no switch statement)
-- [ ] T043 [US1] Create `src/engine/rating.ts` with `rateDifficulty` solving via technique modules only
-- [ ] T044 [US1] Create `src/engine/generate.ts` with `generatePuzzle`: draw from `sudoku-gen`, verify uniqueness, re-rate by technique, redraw on mismatch, and never return the solution
-- [ ] T045 [US1] Create `src/workers/generate.worker.ts` running generation off the main thread, with a main-thread time-sliced fallback when Workers are unavailable
-- [ ] T046 [US1] Implement `newPuzzle` and `selectCell` in `src/state/actions.ts`
-- [ ] T047 [US1] Implement `moveSelection` in `src/state/actions.ts` with edge clamping (FR-019)
-- [ ] T048 [US1] Implement `enterDigit` and `eraseCell` in `src/state/actions.ts`, each recording exactly one `ChangeRecord` and rejecting clue cells
-- [ ] T049 [US1] Extend `src/ui/Cell.tsx` with click selection and clue-versus-player ink styling (FR-005)
-- [ ] T050 [P] [US1] Create `src/ui/Keypad.tsx` with digits 1–9 and touch targets ≥ 44 px
-- [ ] T051 [P] [US1] Create `src/ui/DifficultySelect.tsx` dispatching `newPuzzle` on change
-- [ ] T052 [US1] Add board keyboard handling in `src/ui/Board.tsx` for digits, `Backspace`/`Delete`, arrows and `WASD`, scoped so shortcuts do not fire while a control holds focus; render a skeleton board during `generating` and a brief non-blocking indication on clue rejection (FR-021)
+- [X] T039 [P] [US1] Create `src/engine/solver.ts` with `countSolutions(clues, cap = 2)` and `solve`
+- [X] T040 [P] [US1] Create `src/engine/techniques/nakedSingle.ts` implementing the `Technique` interface from [contracts/engine-api.md](./contracts/engine-api.md)
+- [X] T041 [P] [US1] Create `src/engine/techniques/hiddenSingle.ts` implementing the same interface
+- [X] T042 [US1] Create `src/engine/techniques/index.ts` registering techniques in band order (no switch statement)
+- [X] T043 [US1] Create `src/engine/rating.ts` with `rateDifficulty` solving via technique modules only
+- [X] T044 [US1] Create `src/engine/generate.ts` with `generatePuzzle`: draw from `sudoku-gen`, verify uniqueness, re-rate by technique, redraw on mismatch, and never return the solution
+- [X] T045 [US1] Create `src/workers/generate.worker.ts` running generation off the main thread, with a main-thread time-sliced fallback when Workers are unavailable
+- [X] T046 [US1] Implement `newPuzzle` and `selectCell` in `src/state/actions.ts`
+- [X] T047 [US1] Implement `moveSelection` in `src/state/actions.ts` with edge clamping (FR-019)
+- [X] T048 [US1] Implement `enterDigit` and `eraseCell` in `src/state/actions.ts`, each recording exactly one `ChangeRecord` and rejecting clue cells
+- [X] T049 [US1] Extend `src/ui/Cell.tsx` with click selection and clue-versus-player ink styling (FR-005)
+- [X] T050 [P] [US1] Create `src/ui/Keypad.tsx` with digits 1–9 and touch targets ≥ 44 px
+- [X] T051 [P] [US1] Create `src/ui/DifficultySelect.tsx` dispatching `newPuzzle` on change
+- [X] T052 [US1] Add board keyboard handling in `src/ui/Board.tsx` for digits, `Backspace`/`Delete`, arrows and `WASD`, scoped so shortcuts do not fire while a control holds focus; render a skeleton board during `generating` and a brief non-blocking indication on clue rejection (FR-021)
 
-**Checkpoint**: Slice 1 complete and independently demoable — this is the MVP.
+**Checkpoint**: ✅ **Slice 1 COMPLETE** (2026-08-29) — the MVP. 90 unit tests and 22 browser tests
+green, lint and typecheck clean, static export verified. A real puzzle generates on load; mouse and
+keyboard entry, clue protection, erase, and difficulty switching all work.
+
+Notes from implementation — three findings worth carrying forward:
+
+1. **The task breakdown under-specified the technique set.** T040/T041 scoped only naked and hidden
+   singles, both band `easy`, so `rateDifficulty` could only ever return `easy` — medium and hard were
+   unreachable and generation for those difficulties failed outright. Three technique-derived bands
+   require techniques in three bands. Added `lockedCandidates` and `nakedPair` (medium) and `xWing`
+   (hard), and extended the technique interface to express ELIMINATION findings, not just placements.
+2. **Rating is now tiered, and deliberately so.** sudoku-gen essentially never emits X-Wing puzzles, so
+   defining `hard` as "requires x-wing" left the band unreachable. `hard` now means *demonstrably needs
+   more than the medium set* — proven by running that set to exhaustion and watching it stall. That is
+   a statement about techniques required (a lower bound), which is what Principle IV asks for, and it
+   deliberately declines to name a technique we did not derive.
+3. **The Web Worker was justified by measurement, not assumption.** Generation costs: easy p95 0.8ms,
+   medium p95 9.3ms, hard p95 19.5ms with a 29.2ms max. Hard exceeds the 16ms frame budget, so
+   Principle IV's off-main-thread rule genuinely binds. All generation runs in the worker, with a
+   synchronous fallback where Workers are unavailable.
+
+Bugs caught and fixed during the slice:
+
+- **Layer violation caught by our own lint**: the Engine was importing `Difficulty` and `Puzzle` from
+  `@/state/types` — backwards. They are Engine-produced types; they now live in `src/engine/types.ts`
+  and State re-exports them.
+- **Critical ARIA bug**: `role="grid"` requires `role="row"` children. axe flagged it. Rows are now
+  real elements with `display: contents`, so the CSS grid layout is untouched.
+- **Two test bugs, not app bugs**: a `[data-origin="empty"].first()` locator re-resolves to a
+  *different* cell once a digit lands; and every cell reads `empty` while status is `generating`, so
+  tests that touch the board before generation finishes can latch onto a cell that becomes a clue.
+  Both were invisible single-threaded and failed under parallel load. Specs now gate on
+  `aria-busy="false"` plus a visible clue.
+
+Modules added beyond the task list, each needed by a listed task:
+`src/engine/puzzleString.ts` (the reproducibility record), `src/engine/types.ts` (layer fix),
+`src/engine/candidates.ts` (**completes T081 early** — rating cannot run without it),
+`src/engine/techniques/{lockedCandidates,nakedPair,xWing}.ts`, `src/ui/puzzleLoader.ts` (worker
+client), and `tests/unit/solver.crosscheck.test.ts` (validates our solver against 200 of the
+generator's own solutions, and measures the per-puzzle cost that drove the worker decision).
 
 ---
 
@@ -218,7 +257,7 @@ notes update — then verify one undo restores digit and candidates together.
 
 ### Implementation for User Story 4
 
-- [ ] T081 [P] [US4] Create `src/engine/candidates.ts` with `legalCandidates`
+- [X] T081 [P] [US4] Create `src/engine/candidates.ts` with `legalCandidates` *(done early in Slice 1 — rating depends on it)*
 - [ ] T082 [US4] Implement `setInputMode` and `toggleInputMode` in `src/state/actions.ts`
 - [ ] T083 [US4] Implement `toggleCandidate` in `src/state/actions.ts` recording one `ChangeRecord`
 - [ ] T084 [US4] Extend `enterDigit` in `src/state/actions.ts` to clear the cell's own candidates and strip the digit from all 20 peers, **all within one `ChangeRecord`** (FR-017, FR-023, FR-024)

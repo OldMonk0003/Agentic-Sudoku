@@ -1,6 +1,9 @@
 import type { CellIndex, Coord, Digit } from '@/engine/grid';
 
-export type Difficulty = 'easy' | 'medium' | 'hard';
+// Difficulty and Puzzle are produced by the Engine, so they are owned there.
+// State consumes and re-exports them -- the dependency runs engine <- state.
+export type { Difficulty, Puzzle } from '@/engine/types';
+import type { Puzzle } from '@/engine/types';
 
 /**
  * Who put a value in a cell. 'agent' is reserved for feature 002 and is carried
@@ -12,14 +15,6 @@ export interface Cell {
   readonly value: Digit | null;
   readonly candidates: ReadonlySet<Digit>;
   readonly origin: CellOrigin;
-}
-
-export interface Puzzle {
-  readonly clues: readonly (Digit | null)[];
-  readonly difficulty: Difficulty;
-  /** 81 chars, '-' for empty. The reproducibility record (Principle IV). */
-  readonly puzzleString: string;
-  readonly techniquesRequired: readonly string[];
 }
 
 export type SessionStatus = 'generating' | 'playing' | 'paused' | 'complete';
