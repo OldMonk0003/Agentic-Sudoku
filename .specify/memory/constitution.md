@@ -1,32 +1,41 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 -> 1.1.0
-Bump rationale: MINOR. Materially expanded guidance -- explicit modularity rules added
-to Principle III (renamed), a new WebMCP registration-isolation rule added to
-Principle I, and the TDD mandate in Principle V restated as an unconditional,
-universal rule. No principle removed or redefined incompatibly; all v1.0.0 rules
-remain in force, so previously compliant work stays compliant.
+Version change: 1.1.0 -> 1.2.0
+Bump rationale: MINOR. A mandated technology stack is added to Technology & Architecture
+Constraints, and Principle IV's reproducibility rule is WIDENED (a recorded puzzle
+definition now satisfies it alongside a recorded generation seed) to accommodate a
+generator that exposes no seed parameter. Widening a rule cannot make previously
+compliant work non-compliant -- recording a seed still satisfies the principle -- so
+this is not a MAJOR bump. No principle was removed and no rule was tightened.
 
 Modified principles:
-  - I. WebMCP Standard Compliance (NON-NEGOTIABLE) -- added registration-isolation rule
-  - III. Layered Separation of Concerns
-      -> III. Modular Architecture & Separation of Concerns (renamed + modularity rules)
-  - V. Test-First & Non-Blocking Feedback (NON-NEGOTIABLE) -- TDD mandate made universal
-      and unconditional, with an explicit no-retrofitted-tests rule
+  - IV. Puzzle Integrity & Performance Budgets -- reproducibility rule widened; a new
+    rule requires independent uniqueness verification of any third-party-generated
+    puzzle before it reaches a player
 
 Modified sections:
-  - Development Workflow & Quality Gates -- Definition of Done extended from 6 to 8
-    items (module boundaries; registration isolation; test-first evidence in history)
+  - Technology & Architecture Constraints -- mandated stack added (Next.js App Router +
+    React client components, static export with zero server runtime, Tailwind CSS,
+    Lucide React, sudoku-gen); Determinism constraint clarified for third-party
+    randomness; a solution-quarantine constraint added
+  - Development Workflow & Quality Gates -- Definition of Done extended from 8 to 10
+    items (static-export verification; uniqueness verification of generated puzzles)
 
 Added sections: none
 Removed sections: none
 
 Deferred items: none
 
+Open risk recorded, not deferred:
+  - The 250 KB gzipped first-load budget in Principle IV is now sharply constrained by the
+    mandated framework baseline. Governance already requires budget re-validation whenever a
+    runtime dependency is added or the build target changes; that re-validation MUST happen
+    at the first /speckit-plan and the measured number recorded.
+
 Templates requiring review at runtime (not modified by this command):
   - .specify/templates/plan-template.md -- Constitution Check gate should reflect
-    Principles I-V, the modularity rules, and the numeric budgets in Principle IV.
+    Principles I-V, the mandated stack, and the numeric budgets in Principle IV.
   - .specify/templates/spec-template.md -- non-functional requirement sections should
     reference the performance and accessibility budgets defined here.
   - .specify/templates/tasks-template.md -- task generation should emit contract-test
@@ -163,8 +172,15 @@ inside an explicit performance budget.
 - Every generated puzzle MUST have exactly one solution, proven by a solver that counts
   solutions and terminates at 2. Puzzles with zero or multiple solutions MUST never be
   presented to a player.
-- Generation MUST be reproducible: the same seed MUST yield the same puzzle, and the
-  seed MUST be recorded with the session so any board is reconstructable.
+- Every puzzle obtained from a third-party generator MUST be independently verified
+  against the uniqueness rule above, by this project's own counting solver, before it is
+  presented to a player. A generator's claim of validity is not evidence; a vendor's
+  puzzle that fails verification MUST be discarded and regenerated.
+- Generation MUST be reproducible: any board a player has seen MUST be exactly
+  reconstructable from what the session records. This is satisfied either by recording a
+  generation seed that deterministically reproduces the puzzle, or -- where the generator
+  exposes no seed -- by recording the resulting puzzle definition itself. Reproducibility
+  is the requirement; a seed is one way to achieve it, not the requirement itself.
 - A claimed difficulty rating MUST be derived from the solving techniques actually
   required, not from clue count alone.
 - Hints MUST be logically sound: a hint MUST cite the technique and the cells that
@@ -223,6 +239,31 @@ the agent boundary — where no human is watching.
 
 ## Technology & Architecture Constraints
 
+The stack below is mandated. Replacing any named element is an amendment to this document,
+not a planning decision.
+
+- **Framework**: Next.js using the App Router, with React client components. Every
+  interactive component is a client component; the App Router is used for routing and
+  build output only, never for server behaviour.
+- **Execution**: 100% client-side with zero server runtime. The build MUST produce a fully
+  static export deployable by copying files. Server Actions, Route Handlers, middleware,
+  server-side rendering of dynamic data, incremental regeneration, and any server-only
+  runtime API are prohibited -- not merely unused, but unavailable by configuration, so
+  that a violation fails the build rather than shipping silently.
+- **WebMCP**: the native browser API via `document.modelContext`, used directly. No
+  wrapper library, no SDK, and no abstraction layer may stand between this project's tool
+  registration module and the browser API.
+- **Styling**: Tailwind CSS. The Japandi palette MUST be defined once as named theme
+  tokens; raw hex values and arbitrary-value utilities are prohibited in components, so the
+  palette has exactly one place it can be audited for contrast.
+- **Icons**: Lucide React, imported icon by icon. Barrel imports of the full icon set are
+  prohibited against the bundle budget.
+- **Puzzle generation**: `sudoku-gen`. Its output MUST pass this project's own uniqueness
+  verification before reaching a player (Principle IV), and the puzzle definition it
+  returns MUST be recorded with the session to satisfy reproducibility.
+- **Solution quarantine**: a puzzle's solution MUST NOT leave the Engine layer. It MUST NOT
+  be reachable from the Tools layer, MUST NOT appear in any agent tool result, and MUST NOT
+  be written to persisted session state in a form the page can read back and display.
 - **Runtime**: modern evergreen browsers with `document.modelContext` support for the
   agentic path, and full human playability without it. No IE, no polyfilled WebMCP shim
   presented as the real thing.
@@ -231,8 +272,10 @@ the agent boundary — where no human is watching.
 - **Dependencies**: minimal by default. Every added runtime dependency MUST be justified
   in the plan's Complexity Tracking section against the 250 KB budget. No dependency may
   introduce a network call, a backend requirement, or a build-time secret.
-- **Determinism**: all randomness MUST route through a single seeded PRNG in the Engine.
-  Direct use of `Math.random()` outside that module is prohibited.
+- **Determinism**: all first-party randomness MUST route through a single seeded PRNG in
+  the Engine. Direct use of `Math.random()` in this project's own code, outside that
+  module, is prohibited. A dependency's internal randomness is permitted only where its
+  output is independently verified and recorded, as required for puzzle generation above.
 - **Storage schema**: persisted state MUST carry a schema version and a migration path;
   unreadable or future-versioned stored state MUST be discarded safely, not crash.
 - **Security posture**: no `eval`, no `innerHTML` with non-constant input, no remote
@@ -260,6 +303,10 @@ the agent boundary — where no human is watching.
      example invocation.
   7. Keyboard and screen-reader paths verified; `prefers-reduced-motion` honoured.
   8. No new runtime network request introduced (Principle II).
+  9. The production build completes as a fully static export with no server runtime, and
+     the output is verified to run from a plain file server.
+  10. Any puzzle reaching a player is verified to have exactly one solution by this
+      project's own solver, regardless of which generator produced it.
 - **Review**: every change MUST be reviewed against these principles by name. A reviewer
   citing "Principle II" or "Principle IV budget" is making a binding objection.
 - **Violations**: a deliberate deviation MUST be recorded in the feature plan's
@@ -293,4 +340,4 @@ a review of this document at the close of each milestone to confirm that its bud
 and principles still reflect how the project is actually built. Budgets in Principle IV
 MUST be re-validated whenever a runtime dependency is added or the build target changes.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
+**Version**: 1.2.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
