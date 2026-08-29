@@ -1,6 +1,6 @@
 'use client';
 
-import { colOf, rowOf, toCoord, type CellIndex } from '@/engine/grid';
+import { DIGITS, colOf, rowOf, toCoord, type CellIndex } from '@/engine/grid';
 import type { HighlightTier } from '@/state/selectors';
 import type { Cell as CellData } from '@/state/types';
 
@@ -21,6 +21,7 @@ interface CellProps {
   readonly colIndex: number;
   readonly cell: CellData;
   readonly tier: HighlightTier;
+  readonly conflict: boolean;
   readonly selected: boolean;
   readonly onSelect: (index: CellIndex) => void;
 }
@@ -67,43 +68,50 @@ function weightClass(tier: HighlightTier, cell: CellData): string {
   return 'font-normal';
 }
 
-function inkClass(cell: CellData, tier: HighlightTier): string {
-  if (tier === 'conflict') return 'text-ink-conflict';
+function inkClass(cell: CellData, conflict: boolean): string {
+  if (conflict) return 'text-ink-conflict';
   if (cell.origin === 'clue') return 'text-ink-clue';
   if (cell.origin === 'agent') return 'text-ink-player italic';
   return 'text-ink-player';
 }
 
-function describe(row: number, col: number, cell: CellData, tier: HighlightTier): string {
+function describe(row: number, col: number, cell: CellData, conflict: boolean): string {
   const where = `Row ${row}, column ${col}`;
+  const notes = [...cell.candidates].sort().join(' ');
   const what =
     cell.value === null
-      ? 'empty'
+      ? cell.candidates.size > 0
+        ? `notes ${notes}`
+        : 'empty'
       : cell.origin === 'clue'
         ? `${cell.value}, given`
         : String(cell.value);
-  const state = tier === 'conflict' ? ', conflict' : '';
-  return `${where}, ${what}${state}`;
+  // The conflict is named in the label itself, so a screen reader hears it in
+  // place rather than only via the live region (FR-026, FR-047).
+  return `${where}, ${what}${conflict ? ', conflict' : ''}`;
 }
 
-export function Cell({ index, colIndex, cell, tier, selected, onSelect }: CellProps) {
+export function Cell({ index, colIndex, cell, tier, conflict, selected, onSelect }: CellProps) {
   const { row, col } = toCoord(index);
   const origin = cell.value === null ? 'empty' : cell.origin;
 
-  // What wash this cell would show if it were not the selected one.
-  const underlying: HighlightTier = selected ? 'crosshair' : tier;
+  // What wash this cell would show if it were not the selected one. A selected
+  // cell that is ALSO in conflict keeps the conflict wash -- losing it would hide
+  // the more important signal behind the less important one.
+  const underlying: HighlightTier = selected ? (conflict ? 'conflict' : 'crosshair') : tier;
 
   return (
     <button
       type="button"
       role="gridcell"
-      aria-label={describe(row, col, cell, tier)}
+      aria-label={describe(row, col, cell, conflict)}
       aria-selected={selected}
       tabIndex={selected ? 0 : -1}
       aria-colindex={colIndex}
       data-index={index}
       data-origin={origin}
       data-tier={tier}
+      data-conflict={conflict ? 'true' : 'false'}
       data-selected={selected ? 'true' : 'false'}
       onClick={() => onSelect(index)}
       className={[
@@ -114,7 +122,7 @@ export function Cell({ index, colIndex, cell, tier, selected, onSelect }: CellPr
         borderClasses(index),
         washClass(tier, underlying),
         weightClass(tier, cell),
-        inkClass(cell, tier),
+        inkClass(cell, conflict),
         // The ring, composed over whatever wash applies.
         selected ? 'z-10 outline-2 outline-offset-[-2px] outline-ring-selected' : '',
       ]
@@ -122,6 +130,41 @@ export function Cell({ index, colIndex, cell, tier, selected, onSelect }: CellPr
         .join(' ')}
     >
       {cell.value ?? ''}
+
+      {/*
+        Candidates occupy FIXED positions in a 3x3 sub-grid, so a missing
+        candidate reads as a gap rather than shifting its neighbours (FR-022).
+        That is what makes a pencilled cell scannable at a glance.
+      */}
+      {cell.value === null && cell.candidates.size > 0 && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3 p-[8%]"
+        >
+          {DIGITS.map((digit) => (
+            <span
+              key={digit}
+              {...(cell.candidates.has(digit) ? { 'data-candidate': digit } : {})}
+              className="flex items-center justify-center text-candidate leading-none text-ink-note"
+            >
+              {cell.candidates.has(digit) ? digit : ''}
+            </span>
+          ))}
+        </span>
+      )}
+      {/*
+        The NON-COLOUR cue for a conflict (FR-026). The author's brief specified
+        "soft red"; Principle V forbids conveying anything by colour alone, so the
+        wash is accompanied by a corner wedge that survives greyscale and
+        colour-blind rendering.
+      */}
+      {conflict && (
+        <span
+          data-conflict-marker
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 bottom-0 h-0 w-0 border-r-6 border-b-6 border-r-ink-conflict border-b-transparent"
+        />
+      )}
     </button>
   );
 }

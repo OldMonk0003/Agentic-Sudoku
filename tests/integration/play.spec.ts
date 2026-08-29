@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /** User Story 1 acceptance scenarios, end to end against the static export. */
 
@@ -10,7 +11,7 @@ import { test, expect } from '@playwright/test';
  * that becomes a clue once the puzzle lands. That race is invisible on a fast
  * machine and fails under parallel load.
  */
-async function openReadyBoard(page: import('@playwright/test').Page) {
+async function openReadyBoard(page: Page) {
   await page.goto('/');
   await page.locator('[role="grid"][aria-busy="false"]').waitFor();
   await page.locator('[role="gridcell"][data-origin="clue"]').first().waitFor();

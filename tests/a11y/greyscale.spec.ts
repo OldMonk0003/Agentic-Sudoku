@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * SC-010 / FR-009: the highlight tiers must remain distinguishable with colour
@@ -6,14 +7,14 @@ import { test, expect } from '@playwright/test';
  * washes could not survive greyscale AND keep text at 4.5:1 (research.md R3).
  */
 
-async function openReadyBoard(page: import('@playwright/test').Page) {
+async function openReadyBoard(page: Page) {
   await page.goto('/');
   await page.locator('[role="grid"][aria-busy="false"]').waitFor();
   await page.locator('[role="gridcell"][data-origin="clue"]').first().waitFor();
 }
 
 /** Relative luminance of a computed `rgb(...)` colour. */
-async function luminanceOf(page: import('@playwright/test').Page, selector: string) {
+async function luminanceOf(page: Page, selector: string) {
   return page.evaluate((sel) => {
     const el = document.querySelector(sel) as HTMLElement;
     const parts = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)!.map(Number);

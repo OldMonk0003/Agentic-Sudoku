@@ -1,4 +1,5 @@
 import { generatePuzzle } from '@/engine/generate';
+import { findConflicts, isFull } from '@/engine/conflicts';
 import { peersOf, toIndex, isValidCoord, type Coord, type Digit } from '@/engine/grid';
 import { makeRecord, pushRecord, applyRecord, type CellChange } from './history';
 import type {
@@ -26,6 +27,7 @@ export type Action =
   | { type: 'setInputMode'; mode: InputMode }
   | { type: 'toggleInputMode' }
   | { type: 'enterDigit'; digit: Digit; origin: CellOrigin }
+  | { type: 'toggleCandidate'; digit: Digit; origin: CellOrigin }
   | { type: 'eraseCell'; origin: CellOrigin };
 
 // --- action creators -------------------------------------------------------
@@ -41,11 +43,13 @@ export const setInputMode = (mode: InputMode): Action => ({ type: 'setInputMode'
 export const toggleInputMode = (): Action => ({ type: 'toggleInputMode' });
 export const enterDigit = (digit: Digit, origin: CellOrigin): Action =>
   ({ type: 'enterDigit', digit, origin });
+export const toggleCandidate = (digit: Digit, origin: CellOrigin): Action =>
+  ({ type: 'toggleCandidate', digit, origin });
 export const eraseCell = (origin: CellOrigin): Action => ({ type: 'eraseCell', origin });
 
 export const ACTION_TYPES: ReadonlySet<string> = new Set<Action['type']>([
   'newPuzzle', 'beginGenerating', 'loadPuzzle', 'selectCell', 'moveSelection',
-  'setInputMode', 'toggleInputMode', 'enterDigit', 'eraseCell',
+  'setInputMode', 'toggleInputMode', 'enterDigit', 'toggleCandidate', 'eraseCell',
 ]);
 
 // --- helpers ---------------------------------------------------------------
@@ -65,9 +69,24 @@ function cellsFromPuzzle(puzzle: Puzzle): Cell[] {
   }));
 }
 
-/** Apply a record and push it to history in one step. */
+/**
+ * Apply a record, push it to history, and settle the resulting status.
+ *
+ * Completion is detected here rather than in the UI so it holds for every actor:
+ * the agent filling the last cell in feature 002 completes the puzzle exactly as
+ * a human does (FR-037).
+ */
 function withRecord(session: GameSession, record: ChangeRecord): GameSession {
-  return { ...session, cells: applyRecord(session.cells, record), history: pushRecord(session, record) };
+  const cells = applyRecord(session.cells, record);
+  const values = cells.map((cell) => cell.value);
+  const complete = isFull(values) && findConflicts(values).size === 0;
+
+  return {
+    ...session,
+    cells,
+    history: pushRecord(session, record),
+    status: complete ? 'complete' : session.status,
+  };
 }
 
 const DELTA: Record<Direction, readonly [number, number]> = {
@@ -144,6 +163,29 @@ export function reduce(session: GameSession, action: Action): ReducerOutcome {
       }
 
       return commit(withRecord(session, makeRecord('enterDigit', before, after)));
+    }
+
+    case 'toggleCandidate': {
+      const guard = guardCellEdit(session);
+      if (!guard.ok) return guard;
+      const { index, cell } = guard;
+
+      // A cell holding a value has no candidates to pencil (FR-017's inverse).
+      if (cell.value !== null) return reject('cell-not-empty');
+
+      const candidates = new Set(cell.candidates);
+      if (!candidates.delete(action.digit)) candidates.add(action.digit);
+
+      return commit(
+        withRecord(
+          session,
+          makeRecord(
+            'toggleCandidate',
+            [{ index, cell }],
+            [{ index, cell: { ...cell, candidates, origin: action.origin } }],
+          ),
+        ),
+      );
     }
 
     case 'eraseCell': {

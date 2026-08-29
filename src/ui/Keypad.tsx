@@ -1,15 +1,20 @@
 'use client';
 
 import { DIGITS, type Digit } from '@/engine/grid';
-import { enterDigit } from '@/state/actions';
+import { enterDigit, toggleCandidate } from '@/state/actions';
 import { store } from '@/state/store';
+import { useSelector } from './useStore';
 
 /**
  * The on-screen keypad. Dispatches exactly the same actions as the keyboard, so
  * both paths produce identical results (FR-020).
  */
 export function Keypad() {
-  const press = (digit: Digit) => store.dispatch(enterDigit(digit, 'player'));
+  const notes = useSelector((s) => s.inputMode === 'notes');
+  // FR-020: the keypad and the keyboard must produce identical results, so both
+  // route through the same mode branch.
+  const press = (digit: Digit) =>
+    store.dispatch(notes ? toggleCandidate(digit, 'player') : enterDigit(digit, 'player'));
 
   return (
     <div className="grid w-full max-w-[min(92vw,34rem)] grid-cols-9 gap-1.5" role="group" aria-label="Number pad">

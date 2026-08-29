@@ -256,24 +256,55 @@ confirm each is flagged and clears when resolved. Then finish a board and see th
 
 ### Tests for User Story 3 (write first, watch fail)
 
-- [ ] T063 [P] [US3] Write `tests/unit/conflicts.test.ts` covering duplicates in row, column, and box, that all participants are returned, and that a clue participating in a conflict is included
-- [ ] T064 [P] [US3] Write `tests/unit/conflicts.no-solution-peek.test.ts` asserting a digit that is legal but wrong against the real solution is **not** flagged (FR-029)
-- [ ] T065 [P] [US3] Write `tests/unit/completion.test.ts` asserting completion requires all 81 filled **and** zero conflicts, and that a full board with a conflict is not complete
-- [ ] T066 [P] [US3] Write `tests/component/CompletionBanner.test.tsx` asserting the banner is non-modal, shows final time, and never takes focus
-- [ ] T067 [P] [US3] Write `tests/integration/conflicts.spec.ts` covering the US3 acceptance scenarios
-- [ ] T068 [P] [US3] Write `tests/a11y/conflict-announce.spec.ts` asserting conflicts are announced politely without stealing focus (FR-026)
+- [X] T063 [P] [US3] Write `tests/unit/conflicts.test.ts` covering duplicates in row, column, and box, that all participants are returned, and that a clue participating in a conflict is included
+- [X] T064 [P] [US3] Write `tests/unit/conflicts.no-solution-peek.test.ts` asserting a digit that is legal but wrong against the real solution is **not** flagged (FR-029)
+- [X] T065 [P] [US3] Write `tests/unit/completion.test.ts` asserting completion requires all 81 filled **and** zero conflicts, and that a full board with a conflict is not complete
+- [X] T066 [P] [US3] Write `tests/component/CompletionBanner.test.tsx` asserting the banner is non-modal, shows final time, and never takes focus
+- [X] T067 [P] [US3] Write `tests/integration/conflicts.spec.ts` covering the US3 acceptance scenarios
+- [X] T068 [P] [US3] Write `tests/a11y/conflict-announce.spec.ts` asserting conflicts are announced politely without stealing focus (FR-026)
 
 ### Implementation for User Story 3
 
-- [ ] T069 [P] [US3] Create `src/engine/conflicts.ts` with `findConflicts`, duplicate-constraint only
-- [ ] T070 [US3] Add `conflictSet` and `isComplete` to `src/state/selectors.ts`, recomputed after every change
-- [ ] T071 [US3] Add conflict wash, conflict ink, and a corner marker to `src/ui/Cell.tsx` (FR-025, FR-026)
-- [ ] T072 [US3] Add a polite live-region announcement for conflicts in `src/ui/Board.tsx`
-- [ ] T073 [P] [US3] Create `src/ui/CompletionBanner.tsx` as an inline, dismissible, non-modal banner
-- [ ] T074 [US3] Transition `status` to `complete` in `src/state/actions.ts` when completion is detected, freezing the board (FR-039)
-- [ ] T075 [US3] Reject cell mutations while `status` is `complete` in `src/state/actions.ts` with reason `wrong-status`
+- [X] T069 [P] [US3] Create `src/engine/conflicts.ts` with `findConflicts`, duplicate-constraint only
+- [X] T070 [US3] Add `conflictSet` and `isComplete` to `src/state/selectors.ts`, recomputed after every change
+- [X] T071 [US3] Add conflict wash, conflict ink, and a corner marker to `src/ui/Cell.tsx` (FR-025, FR-026)
+- [X] T072 [US3] Add a polite live-region announcement for conflicts in `src/ui/Board.tsx`
+- [X] T073 [P] [US3] Create `src/ui/CompletionBanner.tsx` as an inline, dismissible, non-modal banner
+- [X] T074 [US3] Transition `status` to `complete` in `src/state/actions.ts` when completion is detected, freezing the board (FR-039)
+- [X] T075 [US3] Reject cell mutations while `status` is `complete` in `src/state/actions.ts` with reason `wrong-status`
 
-**Checkpoint**: Slice 3 complete — Slices 1–3 all work independently.
+**Checkpoint**: ✅ **Slice 3 COMPLETE** (2026-08-29). 142 unit tests and 35 browser tests green, lint
+and typecheck clean, verified live in the browser.
+
+Verified in the running app with a deliberate row conflict:
+
+| Check | Result |
+|---|---|
+| Both participants flagged | 2 cells, clue included |
+| Accessible labels | `"Row 2, column 1, 7, given, conflict"` — names it in place |
+| Non-colour cue | 6px corner wedge, rendered |
+| Ink / wash | `#8A3B29` on `#E6C9BD` — the exact palette tokens |
+| Live region | `"2 cells in conflict"`, polite |
+| Focus | stayed on the player's cell, never stolen |
+| Contrast on the conflict wash | ≥ 4.5:1, asserted in browser |
+
+Notes from implementation:
+
+- **`conflictSet` slotted in without touching a single caller**, exactly as Slice 2 set up. The optional
+  `conflicts` argument on `highlightTier`/`boardTiers` was already there and already defaulted to empty.
+- **T075 needed no work** — `guardCellEdit` already rejected any edit outside `status === 'playing'`,
+  so a completed board was frozen the moment the status transition landed.
+- **Completion is detected in `withRecord`, not in the UI.** That means it holds for every actor: the
+  agent filling the last cell in feature 002 completes the puzzle exactly as a human does (FR-037).
+- **A selected cell that is also in conflict keeps the conflict wash**, not the crosshair. Losing it
+  would hide the more important signal behind the less important one.
+- **The completion banner is deliberately not a dialog.** FR-038 requires non-blocking, and Principle V
+  is explicit that a dismiss-required modal is the blocking feedback the constitution bans. It is an
+  inline `role="status"` banner that never takes focus.
+- Five spec files had inline `import('@playwright/test').Page` annotations, which the
+  `consistent-type-imports` rule flagged. Converted to real type imports.
+
+Informational bundle reading: 188.4 KB gzipped.
 
 ---
 
@@ -286,23 +317,52 @@ notes update — then verify one undo restores digit and candidates together.
 
 ### Tests for User Story 4 (write first, watch fail)
 
-- [ ] T076 [P] [US4] Write `tests/unit/candidates.test.ts` asserting `legalCandidates` excludes every digit present among peers
-- [ ] T077 [P] [US4] Write `tests/unit/actions.candidates.test.ts` asserting `toggleCandidate` adds then removes, is rejected on a cell holding a value, and is rejected on clues
-- [ ] T078 [P] [US4] Write `tests/unit/actions.autoremove.test.ts` — **the critical test** — asserting a placement that clears six peer candidates produces **exactly one** `ChangeRecord` covering seven cells, and that one revert restores all seven (FR-024)
-- [ ] T079 [P] [US4] Write `tests/component/ModeToggle.test.tsx` asserting the toggle, `Space`, and `N` all switch mode and the active mode is always visible
-- [ ] T080 [P] [US4] Write `tests/integration/notes.spec.ts` covering the US4 acceptance scenarios
+- [X] T076 [P] [US4] Write `tests/unit/candidates.test.ts` asserting `legalCandidates` excludes every digit present among peers
+- [X] T077 [P] [US4] Write `tests/unit/actions.candidates.test.ts` asserting `toggleCandidate` adds then removes, is rejected on a cell holding a value, and is rejected on clues
+- [X] T078 [P] [US4] Write `tests/unit/actions.autoremove.test.ts` — **the critical test** — asserting a placement that clears six peer candidates produces **exactly one** `ChangeRecord` covering seven cells, and that one revert restores all seven (FR-024)
+- [X] T079 [P] [US4] Write `tests/component/ModeToggle.test.tsx` asserting the toggle, `Space`, and `N` all switch mode and the active mode is always visible
+- [X] T080 [P] [US4] Write `tests/integration/notes.spec.ts` covering the US4 acceptance scenarios
 
 ### Implementation for User Story 4
 
 - [X] T081 [P] [US4] Create `src/engine/candidates.ts` with `legalCandidates` *(done early in Slice 1 — rating depends on it)*
-- [ ] T082 [US4] Implement `setInputMode` and `toggleInputMode` in `src/state/actions.ts`
-- [ ] T083 [US4] Implement `toggleCandidate` in `src/state/actions.ts` recording one `ChangeRecord`
-- [ ] T084 [US4] Extend `enterDigit` in `src/state/actions.ts` to clear the cell's own candidates and strip the digit from all 20 peers, **all within one `ChangeRecord`** (FR-017, FR-023, FR-024)
-- [ ] T085 [P] [US4] Create `src/ui/ModeToggle.tsx` with a persistently visible active-mode indicator
-- [ ] T086 [US4] Render candidates in fixed 3×3 positions within `src/ui/Cell.tsx` so a missing candidate reads as a gap (FR-022)
-- [ ] T087 [US4] Bind `Space` and `N` to mode toggling in `src/ui/Board.tsx`, scoped to board focus only
+- [X] T082 [US4] Implement `setInputMode` and `toggleInputMode` in `src/state/actions.ts`
+- [X] T083 [US4] Implement `toggleCandidate` in `src/state/actions.ts` recording one `ChangeRecord`
+- [X] T084 [US4] Extend `enterDigit` in `src/state/actions.ts` to clear the cell's own candidates and strip the digit from all 20 peers, **all within one `ChangeRecord`** (FR-017, FR-023, FR-024)
+- [X] T085 [P] [US4] Create `src/ui/ModeToggle.tsx` with a persistently visible active-mode indicator
+- [X] T086 [US4] Render candidates in fixed 3×3 positions within `src/ui/Cell.tsx` so a missing candidate reads as a gap (FR-022)
+- [X] T087 [US4] Bind `Space` and `N` to mode toggling in `src/ui/Board.tsx`, scoped to board focus only
 
-**Checkpoint**: Slice 4 complete — Slices 1–4 all work independently.
+**Checkpoint**: ✅ **SLICE 4 COMPLETE** (2026-08-29). 178 unit tests and 42 browser tests green, lint
+and typecheck clean, verified live in the browser.
+
+**T078 — the task flagged at planning as most likely to be got wrong — passes.** A placement that
+clears six peer candidates produces **exactly one** `ChangeRecord` covering seven cells, and one
+revert restores all seven together. Seven separate assertions guard it, including that peers which
+never held the digit are *not* in the record, and that a placement with nothing to strip still
+records exactly one step.
+
+Verified live: pencilled 1/5/9 into one cell and 2/4/8 into another, both rendering in fixed 3×3
+positions with visible gaps (FR-022), then committed a digit and watched the matching candidate
+vanish from its peers.
+
+Notes from implementation:
+
+- **A real UX bug, not a test bug.** Clicking the Pencil toggle left focus on the button, so the
+  player's next keystroke went nowhere — and *toggle then type* is the primary flow. `ModeToggle` now
+  returns focus to the selected cell. The refocus is **synchronous, not deferred**: an initial
+  `requestAnimationFrame` version let a fast keystroke land before focus moved, which Playwright
+  caught immediately.
+- **T082 and T084 needed no work** — `setInputMode`/`toggleInputMode` and `enterDigit`'s peer-stripping
+  were both already implemented in Slice 1, and T081 (`candidates.ts`) was done early because rating
+  depends on it. Only `toggleCandidate` was genuinely new.
+- **The keypad respects the active mode too**, routing through the same branch as the keyboard, so
+  FR-020's "identical results" still holds now that a digit means two different things.
+- **A synthetic-JS check misled me briefly**: driving clicks through `dispatchEvent` in one tick meant
+  React batched the updates and the handler never saw the mode change. The app was fine; the harness
+  was wrong. Real events via the browser tool confirmed correct behaviour.
+
+Informational bundle reading: 190.6 KB gzipped.
 
 ---
 

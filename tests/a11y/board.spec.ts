@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 /** Accessibility is a gate on every slice, not a final cleanup (constitution). */
 
-async function openReadyBoard(page: import('@playwright/test').Page) {
+async function openReadyBoard(page: Page) {
   await page.goto('/');
   await page.locator('[role="grid"][aria-busy="false"]').waitFor();
   await page.locator('[role="gridcell"][data-origin="clue"]').first().waitFor();

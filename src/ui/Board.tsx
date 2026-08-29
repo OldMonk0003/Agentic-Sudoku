@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { ALL_INDICES, toCoord, toIndex, type CellIndex, type Digit } from '@/engine/grid';
-import { enterDigit, eraseCell, moveSelection, selectCell, toggleInputMode } from '@/state/actions';
-import { boardTiers } from '@/state/selectors';
+import { enterDigit, eraseCell, moveSelection, selectCell, toggleCandidate, toggleInputMode } from '@/state/actions';
+import { boardTiers, conflictSet } from '@/state/selectors';
 import { Cell } from './Cell';
 import { store, useSession } from './useStore';
 import type { Direction } from '@/state/actions';
@@ -29,7 +29,8 @@ const ARROWS: Record<string, Direction> = {
 export function Board() {
   const session = useSession();
   // Computed per render, never stored -- FR-028 holds by construction.
-  const tiers = boardTiers(session);
+  const conflicts = conflictSet(session);
+  const tiers = boardTiers(session, conflicts);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Move programmatic focus with the selection, so keyboard and screen-reader
@@ -54,7 +55,13 @@ export function Board() {
 
     if (key >= '1' && key <= '9') {
       event.preventDefault();
-      store.dispatch(enterDigit(Number(key) as Digit, 'player'));
+      const digit = Number(key) as Digit;
+      // The active mode decides whether a digit is a value or a candidate.
+      store.dispatch(
+        session.inputMode === 'notes'
+          ? toggleCandidate(digit, 'player')
+          : enterDigit(digit, 'player'),
+      );
       return;
     }
 
@@ -72,7 +79,15 @@ export function Board() {
 
   const generating = session.status === 'generating';
 
+  // Announced politely and never given focus, so it cannot interrupt the player
+  // mid-entry (FR-026, FR-018).
+  const conflictMessage =
+    conflicts.size === 0
+      ? ''
+      : `${conflicts.size} cell${conflicts.size === 1 ? '' : 's'} in conflict`;
+
   return (
+    <>
     <div
       ref={gridRef}
       role="grid"
@@ -104,6 +119,7 @@ export function Board() {
               colIndex={col + 1}
               cell={session.cells[index]!}
               tier={tiers[index]!}
+              conflict={conflicts.has(index)}
               selected={session.selection !== null && toIndex(session.selection) === index}
               onSelect={onSelect}
             />
@@ -111,5 +127,9 @@ export function Board() {
         </div>
       ))}
     </div>
+    <p role="status" aria-live="polite" className="sr-only">
+      {conflictMessage}
+    </p>
+    </>
   );
 }

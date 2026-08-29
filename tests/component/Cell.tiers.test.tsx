@@ -19,8 +19,18 @@ afterEach(cleanup);
 const emptyCell: CellData = { value: null, candidates: new Set(), origin: 'player' };
 const clueCell: CellData = { value: 5, candidates: new Set(), origin: 'clue' };
 
-function renderCell(tier: HighlightTier, cell: CellData = emptyCell, selected = false) {
-  render(<Cell index={0} colIndex={1} cell={cell} tier={tier} selected={selected} onSelect={() => {}} />);
+function renderCell(tier: HighlightTier, cell: CellData = emptyCell, selected = false, conflict = false) {
+  render(
+    <Cell
+      index={0}
+      colIndex={1}
+      cell={cell}
+      tier={tier}
+      conflict={conflict}
+      selected={selected}
+      onSelect={() => {}}
+    />,
+  );
   return screen.getByRole('gridcell');
 }
 
@@ -64,6 +74,25 @@ describe('Cell highlight tiers', () => {
     const el = renderCell('matching', clueCell, true);
     expect(el.className).not.toMatch(/#[0-9a-fA-F]{3,8}/);
     expect(el.className).not.toMatch(/\[(rgb|hsl|#)/);
+  });
+
+  it('renders the conflict wash, ink, and a NON-COLOUR corner marker (FR-026)', () => {
+    const el = renderCell('conflict', clueCell, false, true);
+    expect(el.className).toContain('bg-wash-conflict');
+    expect(el.className).toContain('text-ink-conflict');
+    expect(el.querySelector('[data-conflict-marker]')).not.toBeNull();
+  });
+
+  it('keeps the conflict wash even when the conflicting cell is selected', () => {
+    // Losing it would hide the more important signal behind the less important one.
+    const el = renderCell('selected', clueCell, true, true);
+    expect(el.className).toContain('bg-wash-conflict');
+    expect(el.className).toMatch(/outline-2/);
+  });
+
+  it('names the conflict in the accessible label so it is heard in place', () => {
+    const el = renderCell('conflict', clueCell, false, true);
+    expect(el.getAttribute('aria-label')).toMatch(/conflict/i);
   });
 
   it('exposes the tier to tests and assistive tooling via data-tier', () => {

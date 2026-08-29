@@ -1,4 +1,5 @@
 import { boxOf, colOf, peersOf, rowOf, toIndex, type CellIndex } from '@/engine/grid';
+import { findConflicts, isFull } from '@/engine/conflicts';
 import type { GameSession } from './types';
 
 /**
@@ -37,6 +38,23 @@ export function matchingSet(session: GameSession): ReadonlySet<CellIndex> {
     if (cell.value === digit) set.add(index);
   });
   return set;
+}
+
+/**
+ * Cells participating in a duplicate.
+ *
+ * Derived, never stored -- which is what makes FR-028 ("re-evaluated after every
+ * change") true by construction rather than by discipline. Storing it would
+ * invite it drifting out of sync with the board.
+ */
+export function conflictSet(session: GameSession): ReadonlySet<CellIndex> {
+  return findConflicts(session.cells.map((cell) => cell.value));
+}
+
+/** All 81 filled AND no conflicts (FR-037). A full but contradictory board is not complete. */
+export function isComplete(session: GameSession): boolean {
+  const values = session.cells.map((cell) => cell.value);
+  return isFull(values) && findConflicts(values).size === 0;
 }
 
 export type HighlightTier = 'none' | 'crosshair' | 'matching' | 'conflict' | 'selected';
