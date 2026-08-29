@@ -1,7 +1,7 @@
 import { generatePuzzle } from '@/engine/generate';
 import { findConflicts, isFull } from '@/engine/conflicts';
 import { peersOf, toIndex, isValidCoord, type Coord, type Digit } from '@/engine/grid';
-import { makeRecord, pushRecord, applyRecord, type CellChange } from './history';
+import { makeRecord, pushRecord, applyRecord, revertRecord, type CellChange } from './history';
 import type {
   Cell, CellOrigin, ChangeRecord, Difficulty,
   GameSession, InputMode, Puzzle, RejectionReason,
@@ -28,7 +28,11 @@ export type Action =
   | { type: 'toggleInputMode' }
   | { type: 'enterDigit'; digit: Digit; origin: CellOrigin }
   | { type: 'toggleCandidate'; digit: Digit; origin: CellOrigin }
-  | { type: 'eraseCell'; origin: CellOrigin };
+  | { type: 'eraseCell'; origin: CellOrigin }
+  | { type: 'undo' }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'tick'; deltaMs: number };
 
 // --- action creators -------------------------------------------------------
 
@@ -46,10 +50,15 @@ export const enterDigit = (digit: Digit, origin: CellOrigin): Action =>
 export const toggleCandidate = (digit: Digit, origin: CellOrigin): Action =>
   ({ type: 'toggleCandidate', digit, origin });
 export const eraseCell = (origin: CellOrigin): Action => ({ type: 'eraseCell', origin });
+export const undo = (): Action => ({ type: 'undo' });
+export const pause = (): Action => ({ type: 'pause' });
+export const resume = (): Action => ({ type: 'resume' });
+export const tick = (deltaMs: number): Action => ({ type: 'tick', deltaMs });
 
 export const ACTION_TYPES: ReadonlySet<string> = new Set<Action['type']>([
   'newPuzzle', 'beginGenerating', 'loadPuzzle', 'selectCell', 'moveSelection',
   'setInputMode', 'toggleInputMode', 'enterDigit', 'toggleCandidate', 'eraseCell',
+  'undo', 'pause', 'resume', 'tick',
 ]);
 
 // --- helpers ---------------------------------------------------------------
@@ -200,6 +209,39 @@ export function reduce(session: GameSession, action: Action): ReducerOutcome {
         withRecord(session, makeRecord('eraseCell', [{ index, cell }], [{ index, cell: cleared }])),
       );
     }
+
+    case 'undo': {
+      const record = session.history.at(-1);
+      if (!record) return reject('nothing-to-undo');
+
+      // No distinction by origin: an agent's change reverses exactly like a
+      // human's, which is what 002/FR-042 requires and why it is true here by
+      // construction rather than added later.
+      const cells = revertRecord(session.cells, record);
+
+      return commit({
+        ...session,
+        cells,
+        history: session.history.slice(0, -1),
+        // Undoing out of a completed board returns it to play.
+        status: session.status === 'complete' ? 'playing' : session.status,
+      });
+    }
+
+    case 'pause':
+      if (session.status !== 'playing') return reject('wrong-status');
+      return commit({ ...session, status: 'paused' });
+
+    case 'resume':
+      if (session.status !== 'paused') return reject('wrong-status');
+      return commit({ ...session, status: 'playing' });
+
+    case 'tick':
+      // Rejected while paused and while complete, so a stopped clock really
+      // stops (FR-035) and a finished one stays finished (FR-036).
+      if (session.status !== 'playing') return reject('wrong-status');
+      if (action.deltaMs <= 0) return commit(null);
+      return commit({ ...session, elapsedMs: session.elapsedMs + action.deltaMs });
 
     default:
       return reject('unknown-action');

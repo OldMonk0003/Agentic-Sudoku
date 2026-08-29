@@ -78,6 +78,25 @@ test('board frame is visible', async ({ page }) => {
   expect(frame).toBeGreaterThan(0);
 });
 
+/**
+ * REGRESSION: wrapping the board for the pause overlay shrink-wrapped it -- the
+ * wrapper had no width, so the board's own `w-full max-w-[...]` collapsed with
+ * it. Every test still passed while the board rendered at a fraction of its size.
+ */
+test('the board fills its available width and stays square', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('[role="grid"][aria-busy="false"]').waitFor();
+
+  const box = await page.locator('[role="grid"]').boundingBox();
+  expect(box).not.toBeNull();
+
+  // Square within a pixel of rounding.
+  expect(Math.abs(box!.width - box!.height)).toBeLessThan(2);
+  // And actually large -- not collapsed to a fraction of the viewport.
+  const viewport = page.viewportSize()!;
+  expect(box!.width).toBeGreaterThan(Math.min(viewport.width, viewport.height) * 0.55);
+});
+
 test('paints the Japandi ground rather than plain white', async ({ page }) => {
   await page.goto('/');
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);

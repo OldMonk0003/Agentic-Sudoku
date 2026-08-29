@@ -375,23 +375,49 @@ then pause and resume the timer.
 
 ### Tests for User Story 5 (write first, watch fail)
 
-- [ ] T088 [P] [US5] Write `tests/unit/actions.undo.test.ts` asserting five changes then five undos restores the untouched board, that undo on empty history returns `ok: false` with `nothing-to-undo`, and that `newPuzzle` clears history so undo cannot cross the boundary (FR-033)
-- [ ] T089 [P] [US5] Write `tests/unit/timer.test.ts` asserting `tick` accumulates only while `playing`, and is rejected while `paused` and `complete`
-- [ ] T090 [P] [US5] Write `tests/component/Controls.test.tsx` asserting Undo renders visibly disabled when there is nothing to undo (FR-032)
-- [ ] T091 [P] [US5] Write `tests/integration/undo-timer.spec.ts` covering the US5 acceptance scenarios
-- [ ] T092 [P] [US5] Write `tests/a11y/reduced-motion.spec.ts` asserting the pause overlay appears without transition under `prefers-reduced-motion` (FR-049)
+- [X] T088 [P] [US5] Write `tests/unit/actions.undo.test.ts` asserting five changes then five undos restores the untouched board, that undo on empty history returns `ok: false` with `nothing-to-undo`, and that `newPuzzle` clears history so undo cannot cross the boundary (FR-033)
+- [X] T089 [P] [US5] Write `tests/unit/timer.test.ts` asserting `tick` accumulates only while `playing`, and is rejected while `paused` and `complete`
+- [X] T090 [P] [US5] Write `tests/component/Controls.test.tsx` asserting Undo renders visibly disabled when there is nothing to undo (FR-032)
+- [X] T091 [P] [US5] Write `tests/integration/undo-timer.spec.ts` covering the US5 acceptance scenarios
+- [X] T092 [P] [US5] Write `tests/a11y/reduced-motion.spec.ts` asserting the pause overlay appears without transition under `prefers-reduced-motion` (FR-049)
 
 ### Implementation for User Story 5
 
-- [ ] T093 [US5] Implement `undo` in `src/state/actions.ts`, replaying the newest record's `before` and making no distinction by `origin`
-- [ ] T094 [US5] Implement `pause`, `resume`, and `tick` in `src/state/actions.ts` with the status guards from [contracts/store-actions.md](./contracts/store-actions.md)
-- [ ] T095 [P] [US5] Create `src/ui/Timer.tsx` displaying `MM:SS` and owning the interval that dispatches `tick`
-- [ ] T096 [P] [US5] Create `src/ui/Controls.tsx` with Erase and Undo, using per-icon Lucide imports
-- [ ] T097 [US5] Add the pause overlay to `src/ui/GameScreen.tsx` — player-dismissible, obscuring the board, honouring reduced motion
-- [ ] T098 [US5] Stop the timer permanently on completion in `src/ui/Timer.tsx` (FR-036)
-- [ ] T099 [US5] Wire the Erase control in `src/ui/Controls.tsx` to the existing `eraseCell` action
+- [X] T093 [US5] Implement `undo` in `src/state/actions.ts`, replaying the newest record's `before` and making no distinction by `origin`
+- [X] T094 [US5] Implement `pause`, `resume`, and `tick` in `src/state/actions.ts` with the status guards from [contracts/store-actions.md](./contracts/store-actions.md)
+- [X] T095 [P] [US5] Create `src/ui/Timer.tsx` displaying `MM:SS` and owning the interval that dispatches `tick`
+- [X] T096 [P] [US5] Create `src/ui/Controls.tsx` with Erase and Undo, using per-icon Lucide imports
+- [X] T097 [US5] Add the pause overlay to `src/ui/GameScreen.tsx` — player-dismissible, obscuring the board, honouring reduced motion
+- [X] T098 [US5] Stop the timer permanently on completion in `src/ui/Timer.tsx` (FR-036)
+- [X] T099 [US5] Wire the Erase control in `src/ui/Controls.tsx` to the existing `eraseCell` action
 
-**Checkpoint**: Slice 5 complete — Slices 1–5 all work independently.
+**Checkpoint**: ✅ **SLICE 5 COMPLETE** (2026-08-29). 207 unit tests and 54 browser tests green, lint
+and typecheck clean, verified live in the browser.
+
+Verified live: paused at 00:03 with the board fully obscured, resumed and watched the clock continue
+from where it stopped rather than restarting.
+
+Notes from implementation:
+
+- **A real accessibility bug, caught by a "strict mode violation" in Playwright.** The header
+  pause/resume toggle and the overlay both rendered a button named "Resume" — two controls with the
+  same accessible name, ambiguous for screen-reader users and putting the action away from where the
+  player is looking. The header button now renders only while playing; the overlay owns Resume. One
+  control, one name, at a time. The test ambiguity was a symptom, not the problem.
+- **A layout regression the whole suite missed.** Wrapping the board for the pause overlay
+  shrink-wrapped it: the wrapper had no width, so the board's own `w-full max-w-[...]` collapsed with
+  it and the board rendered at roughly half size. Every test still passed. This is the second time a
+  visual defect has slipped past a green suite in this feature — added a regression test asserting the
+  grid is square and occupies a real fraction of the viewport.
+- **The pause curtain is matched to the board footprint**, not the full wrapper width, so it covers the
+  board and nothing else.
+- **Undo out of a completed board returns it to play**, rather than leaving a frozen board with a
+  usable Undo button.
+- **`tick` is rejected unless the status is `playing`**, so pausing and completing both stop the clock
+  without `Timer` needing to know which case it is in. The View owns the interval, the store owns the
+  number — which is what makes the timer deterministic in tests rather than dependent on wall time.
+
+Informational bundle reading: 195.9 KB gzipped.
 
 ---
 
