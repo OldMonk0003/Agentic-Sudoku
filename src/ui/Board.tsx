@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { ALL_INDICES, toCoord, toIndex, type CellIndex, type Digit } from '@/engine/grid';
 import { enterDigit, eraseCell, moveSelection, selectCell, toggleInputMode } from '@/state/actions';
+import { boardTiers } from '@/state/selectors';
 import { Cell } from './Cell';
 import { store, useSession } from './useStore';
 import type { Direction } from '@/state/actions';
@@ -27,6 +28,8 @@ const ARROWS: Record<string, Direction> = {
 
 export function Board() {
   const session = useSession();
+  // Computed per render, never stored -- FR-028 holds by construction.
+  const tiers = boardTiers(session);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Move programmatic focus with the selection, so keyboard and screen-reader
@@ -100,6 +103,7 @@ export function Board() {
               index={index}
               colIndex={col + 1}
               cell={session.cells[index]!}
+              tier={tiers[index]!}
               selected={session.selection !== null && toIndex(session.selection) === index}
               onSelect={onSelect}
             />

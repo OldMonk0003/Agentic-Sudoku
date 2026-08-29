@@ -36,6 +36,24 @@ function getWorker(): Worker | null {
   }
 }
 
+const MAX_RETRIES = 3;
+const retriesFor = new Map<number, number>();
+
+/**
+ * Exhausting the attempt budget is vanishingly rare but not impossible, and
+ * leaving the board blank forever is the worst possible response. Retry with a
+ * fresh seed rather than stranding the player.
+ */
+function retry(difficulty: Difficulty, seed: number, requestId: number): void {
+  const used = retriesFor.get(requestId) ?? 0;
+  if (used >= MAX_RETRIES) {
+    retriesFor.delete(requestId);
+    return;
+  }
+  retriesFor.set(requestId, used + 1);
+  requestPuzzle(difficulty, (seed + 0x9e3779b9) >>> 0);
+}
+
 export function requestPuzzle(difficulty: Difficulty, seed = Date.now() >>> 0): void {
   store.dispatch(beginGenerating(difficulty));
 
@@ -45,6 +63,7 @@ export function requestPuzzle(difficulty: Difficulty, seed = Date.now() >>> 0): 
   if (!active) {
     const result = generatePuzzle({ difficulty, seed });
     if (result.ok) store.dispatch(loadPuzzle(result.puzzle));
+    else retry(difficulty, seed, requestId);
     return;
   }
 
@@ -54,6 +73,7 @@ export function requestPuzzle(difficulty: Difficulty, seed = Date.now() >>> 0): 
     if (event.data.requestId !== latestRequestId) return;
     active.removeEventListener('message', onMessage);
     if (event.data.ok) store.dispatch(loadPuzzle(event.data.puzzle));
+    else retry(difficulty, seed, requestId);
   };
 
   active.addEventListener('message', onMessage);

@@ -192,21 +192,58 @@ and clears, and that no game state changes as a result.
 
 ### Tests for User Story 2 (write first, watch fail)
 
-- [ ] T053 [P] [US2] Write `tests/unit/selectors.highlight.test.ts` asserting `crosshairSet` covers row, column, and box, `matchingSet` covers equal values including clues, and both are empty-safe when the selected cell is empty (FR-011)
-- [ ] T054 [P] [US2] Write `tests/unit/selectors.purity.test.ts` asserting selecting a cell leaves values, candidates, elapsed time, and history untouched (FR-010)
-- [ ] T055 [P] [US2] Write `tests/component/Cell.tiers.test.tsx` asserting tier precedence resolves to the correct class per [data-model.md](./data-model.md)
-- [ ] T056 [P] [US2] Write `tests/a11y/greyscale.spec.ts` asserting crosshair, matching, and selected states remain distinguishable with colour removed (SC-010)
+- [X] T053 [P] [US2] Write `tests/unit/selectors.highlight.test.ts` asserting `crosshairSet` covers row, column, and box, `matchingSet` covers equal values including clues, and both are empty-safe when the selected cell is empty (FR-011)
+- [X] T054 [P] [US2] Write `tests/unit/selectors.purity.test.ts` asserting selecting a cell leaves values, candidates, elapsed time, and history untouched (FR-010)
+- [X] T055 [P] [US2] Write `tests/component/Cell.tiers.test.tsx` asserting tier precedence resolves to the correct class per [data-model.md](./data-model.md)
+- [X] T056 [P] [US2] Write `tests/a11y/greyscale.spec.ts` asserting crosshair, matching, and selected states remain distinguishable with colour removed (SC-010)
 
 ### Implementation for User Story 2
 
-- [ ] T057 [P] [US2] Create `src/state/selectors.ts` with `crosshairSet` and `matchingSet`, computed not stored
-- [ ] T058 [US2] Add crosshair and matching wash classes to `src/ui/Cell.tsx` using palette tokens only
-- [ ] T059 [US2] Implement the 2px selection **ring** in `src/ui/Cell.tsx` — a ring, not a fill, per [research.md § R3](./research.md); this is what keeps every tier legible
-- [ ] T060 [US2] Implement tier precedence composition (conflict > matching > crosshair, ring over any) in `src/ui/Cell.tsx`
-- [ ] T061 [US2] Render matching-digit cells at medium type weight as the non-colour cue (FR-009)
-- [ ] T062 [US2] Wire highlight selectors into `src/ui/Board.tsx` via `useStore.ts`
+- [X] T057 [P] [US2] Create `src/state/selectors.ts` with `crosshairSet` and `matchingSet`, computed not stored
+- [X] T058 [US2] Add crosshair and matching wash classes to `src/ui/Cell.tsx` using palette tokens only
+- [X] T059 [US2] Implement the 2px selection **ring** in `src/ui/Cell.tsx` — a ring, not a fill, per [research.md § R3](./research.md); this is what keeps every tier legible
+- [X] T060 [US2] Implement tier precedence composition (conflict > matching > crosshair, ring over any) in `src/ui/Cell.tsx`
+- [X] T061 [US2] Render matching-digit cells at medium type weight as the non-colour cue (FR-009)
+- [X] T062 [US2] Wire highlight selectors into `src/ui/Board.tsx` via `useStore.ts`
 
-**Checkpoint**: Slice 2 complete — Slices 1 and 2 both work independently.
+**Checkpoint**: ✅ **Slice 2 COMPLETE** (2026-08-29). 111 unit tests and 26 browser tests green, lint
+and typecheck clean. Selecting a cell tints its row, column and box; selecting a digit lights every
+other instance of it, bolder; the selected cell carries the ring over whichever wash applies.
+
+Notes from implementation:
+
+- **The ring design paid off exactly as research.md R3 predicted.** `washClass` resolves what a
+  selected cell *would* have shown and renders that, with the ring composed on top — so the selection
+  never introduces a fourth, darker fill for text to fight. Verified in the browser with crosshair and
+  matching tiers on screen simultaneously.
+- **`boardTiers` computes all 81 tiers in one pass.** The per-cell `highlightTier` recomputes both sets
+  on every call, which is fine for a single lookup and wasteful for a full board. Both are exported;
+  the Board uses the batch form.
+- **`conflictSet` already has its slot.** `highlightTier` and `boardTiers` take conflicts as an
+  optional argument defaulting to empty, so User Story 3 plugs in without touching any caller.
+- **Unhighlighted cells now paint `bg-ground` explicitly.** They previously inherited from the board,
+  so their computed background was transparent and read as luminance 0 — which failed the greyscale
+  ladder test against a board that actually rendered correctly. The test now throws on a transparent
+  background rather than silently measuring zero.
+- **One test assumption was wrong, not the code**: a precedence test assumed cell (1,1) was empty. On
+  the puzzle it drew, (1,1) held a digit that (9,9) matched, so `matching` was the correct answer. The
+  test now selects a known-empty cell and picks a cell outside its crosshair.
+
+**A real bug surfaced as a flaky test.** The property suite failed roughly 1 run in 8, on
+`["hard", <seed>]`. It was not a flaky test — `generatePuzzle` was genuinely returning `ok: false`
+for hard puzzles. Measured per-draw hit rates for our hard band (n=400 each): sudoku-gen `hard`
+**0.125**, `expert` **0.372**. Drawing 50/50 gave ~0.25 per attempt, so a 25-attempt budget exhausted
+about 1 generation in 1350 — rare enough to look like test noise, frequent enough to strand a real
+player on a blank board. Two fixes: the hard band now draws from `expert` only and the attempt cap
+rose to 60 (~1e-13 exhaustion rate), and `puzzleLoader` retries with a fresh seed on exhaustion rather
+than leaving the board empty forever. A regression test generates 120 hard puzzles across fixed seeds.
+
+**A second flaky test WAS a bad assumption**: `matchingSet` asserted the first clue's digit appears
+more than once, which is puzzle-dependent. It now picks the most frequent digit on the board.
+
+Stability verified over 25 consecutive full runs, zero failures.
+
+Informational bundle reading: 187.8 KB gzipped (up from 167 KB at Slice 0).
 
 ---
 

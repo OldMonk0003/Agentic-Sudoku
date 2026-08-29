@@ -44,6 +44,17 @@ describe('generatePuzzle', () => {
     }
   });
 
+  it('REGRESSION: hard generation succeeds across many seeds', () => {
+    // The hard band exhausted its attempt budget roughly 1 generation in 1350
+    // when drawing 50/50 from sudoku-gen 'hard' (P=0.125) and 'expert'
+    // (P=0.372). That surfaced as a flaky property test and would have stranded
+    // a real player on a blank board.
+    for (let seed = 0; seed < 120; seed++) {
+      const result = generatePuzzle({ difficulty: 'hard', seed: seed * 104729 });
+      expect(result.ok, `seed ${seed}`).toBe(true);
+    }
+  });
+
   it('stays within the 500ms generation budget (Principle IV)', () => {
     const start = performance.now();
     generatePuzzle({ difficulty: 'hard', seed: 13 });

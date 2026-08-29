@@ -24,6 +24,7 @@ import type { Difficulty, Puzzle } from './types';
 export interface GenerateRequest {
   readonly difficulty: Difficulty;
   readonly seed: number;
+  /** Default 60. At P(hard)=0.372 per draw that is a ~1e-13 exhaustion rate. */
   readonly maxAttempts?: number;
 }
 
@@ -42,11 +43,16 @@ export type GenerateResult =
 const SOURCE_BANDS: Record<Difficulty, readonly ('easy' | 'medium' | 'hard' | 'expert')[]> = {
   easy: ['easy', 'medium'],
   medium: ['hard', 'expert'],
-  hard: ['hard', 'expert'],
+  // 'expert' only. MEASURED per-draw hit rate for our hard band (n=400 each):
+  // sudoku-gen 'hard' 0.125, 'expert' 0.372. Drawing 50/50 gave ~0.25 per
+  // attempt, so 25 attempts exhausted roughly 1 generation in 1350 -- rare
+  // enough to look like a flaky test and frequent enough to strand a real
+  // player on a blank board. Expert-only plus a higher cap makes it negligible.
+  hard: ['expert'],
 };
 
 export function generatePuzzle(request: GenerateRequest): GenerateResult {
-  const { difficulty, seed, maxAttempts = 25 } = request;
+  const { difficulty, seed, maxAttempts = 60 } = request;
   const prng = createPrng(seed);
   const bands = SOURCE_BANDS[difficulty];
 
