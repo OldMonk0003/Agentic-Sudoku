@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/**
+ * ============================================================================
+ * The Japandi palette. THIS IS THE ONLY PLACE THESE VALUES MAY EXIST.
+ *
+ * Every ratio here was computed, not judged (research.md R3). The first
+ * candidate palette failed four contrast checks; two design changes fixed it:
+ *
+ *   1. The selected cell is a RING, not a fill. Removing the fourth (darkest)
+ *      wash from beneath text frees the whole luminance budget, and a ring is
+ *      the strongest greyscale and colour-blind cue available.
+ *   2. Two inks, not three. Three inks all clearing 4.5:1 on the deepest wash
+ *      fit only within L <= 0.093, leaving no margin. Agent digits (feature
+ *      002) share the player ink and are marked by italic + a sage corner glyph.
+ *
+ * tests/unit/palette.contrast.test.ts parses this block. Change a value and
+ * the suite fails.
+ * ============================================================================
+ */
+@theme {
+  /* Surfaces */
+  --color-ground: #F6F2EA;          /* board and page paper */
+  --color-surface: #FCFAF6;         /* raised panels, keypad */
+
+  /* Highlight washes -- a perceptible ladder, ground -> crosshair -> matching */
+  --color-wash-crosshair: #EAE2D2;  /* row / column / box tint */
+  --color-wash-matching: #D9C9AC;   /* same-digit tint */
+  --color-wash-conflict: #E6C9BD;   /* clay conflict wash */
+
+  /* Selection is a ring, never a fill */
+  --color-ring-selected: #26231F;
+
+  /* Inks */
+  --color-ink-clue: #26231F;        /* starting clues, heaviest */
+  --color-ink-player: #2F4E63;      /* player entries (and agent entries) */
+  --color-ink-note: #544E44;        /* pencil candidates */
+  --color-ink-conflict: #8A3B29;    /* muted clay, never alert red */
+
+  /* Grid lines -- the 3x3 structure is carried by WEIGHT, not colour */
+  --color-line-hairline: #DCD3C3;   /* decorative cell subdivision */
+  --color-line-box: #8B8175;        /* structural box framing */
+
+  /* Reserved for feature 002 */
+  --color-mark-agent: #5E7A63;      /* sage corner glyph on agent-placed digits */
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Type scale -- fluid so the board stays legible from 360px upward (FR-050) */
+  --text-cell: clamp(1rem, 4.5vmin, 1.75rem);
+  --text-candidate: clamp(0.5rem, 1.6vmin, 0.7rem);
+}
+
+html,
+body {
+  background-color: var(--color-ground);
+  color: var(--color-ink-clue);
+}
+
+/* Principle V: motion is reduced or removed on request, with no exceptions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

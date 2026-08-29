@@ -37,16 +37,16 @@ Paths follow [plan.md § Source Code](./plan.md): `app/` (Next.js shell), `src/e
 
 **Purpose**: Project initialization. Combined with Phase 2 this forms **Slice 0**.
 
-- [ ] T001 Initialize Node project and commit `package.json` at repository root
-- [ ] T002 Install runtime dependencies: `next@16`, `react@19`, `react-dom@19`, `sudoku-gen`, `lucide-react`
-- [ ] T003 Install dev dependencies: `typescript`, `vitest`, `fast-check`, `@testing-library/react`, `@playwright/test`, `@axe-core/playwright`, `eslint`, `eslint-plugin-import`, `tailwindcss@4`, `@tailwindcss/postcss`
-- [ ] T004 [P] Create `tsconfig.json` with `strict: true`, `noUncheckedIndexedAccess: true`, and path alias `@/*` → `src/*`
-- [ ] T005 [P] Create `next.config.ts` with `output: 'export'` and `images.unoptimized: true`
-- [ ] T006 [P] Create `postcss.config.mjs` registering `@tailwindcss/postcss`
-- [ ] T007 [P] Create `vitest.config.ts` with a `node` environment for `tests/unit` and `tests/property`, and `jsdom` for `tests/component`
-- [ ] T008 [P] Create `playwright.config.ts` pointing at the static `out/` directory served by a plain file server
-- [ ] T009 Create `eslint.config.mjs` with an `import/no-restricted-paths` rule enforcing `engine ← state ← ui` and banning deep imports past module entry points
-- [ ] T010 Add npm scripts to `package.json`: `dev`, `build`, `test`, `test:perf`, `test:a11y`, `lint`
+- [X] T001 Initialize Node project and commit `package.json` at repository root
+- [X] T002 Install runtime dependencies: `next@16`, `react@19`, `react-dom@19`, `sudoku-gen`, `lucide-react`
+- [X] T003 Install dev dependencies: `typescript`, `vitest`, `fast-check`, `@testing-library/react`, `@playwright/test`, `@axe-core/playwright`, `eslint`, `eslint-plugin-import`, `tailwindcss@4`, `@tailwindcss/postcss`
+- [X] T004 [P] Create `tsconfig.json` with `strict: true`, `noUncheckedIndexedAccess: true`, and path alias `@/*` → `src/*`
+- [X] T005 [P] Create `next.config.ts` with `output: 'export'` and `images.unoptimized: true`
+- [X] T006 [P] Create `postcss.config.mjs` registering `@tailwindcss/postcss`
+- [X] T007 [P] Create `vitest.config.ts` with a `node` environment for `tests/unit` and `tests/property`, and `jsdom` for `tests/component`
+- [X] T008 [P] Create `playwright.config.ts` pointing at the static `out/` directory served by a plain file server
+- [X] T009 Create `eslint.config.mjs` with an `import/no-restricted-paths` rule enforcing `engine ← state ← ui` and banning deep imports past module entry points
+- [X] T010 Add npm scripts to `package.json`: `dev`, `build`, `test`, `test:perf`, `test:a11y`, `lint`
 
 ---
 
@@ -60,29 +60,45 @@ Paths follow [plan.md § Source Code](./plan.md): `app/` (Next.js shell), `src/e
 
 ### Tests for Phase 2 (write first, watch fail)
 
-- [ ] T011 [P] Write `tests/unit/palette.contrast.test.ts` asserting every ratio in [research.md § R3](./research.md): clue/player/conflict/note ink ≥ 4.5:1 on ground, crosshair, matching, and conflict washes; selection ring ≥ 3.0:1; box lines ≥ 3.0:1; clue-vs-player ink ≥ 1.5:1 in greyscale
-- [ ] T012 [P] Write `tests/unit/grid.test.ts` covering index↔coordinate round-trips, box computation, and that `peersOf` returns exactly 20 cells for every index
-- [ ] T013 [P] Write `tests/unit/store.skeleton.test.ts` asserting `getState`/`subscribe`/`dispatch` exist, subscribe returns a working unsubscribe, and an unknown action returns `ok: false` without throwing
-- [ ] T014 [P] Write `tests/integration/static-export.spec.ts` asserting the built site loads and renders the grid when served from a plain file server with no Next.js runtime
+- [X] T011 [P] Write `tests/unit/palette.contrast.test.ts` asserting every ratio in [research.md § R3](./research.md): clue/player/conflict/note ink ≥ 4.5:1 on ground, crosshair, matching, and conflict washes; selection ring ≥ 3.0:1; box lines ≥ 3.0:1; clue-vs-player ink ≥ 1.5:1 in greyscale
+- [X] T012 [P] Write `tests/unit/grid.test.ts` covering index↔coordinate round-trips, box computation, and that `peersOf` returns exactly 20 cells for every index
+- [X] T013 [P] Write `tests/unit/store.skeleton.test.ts` asserting `getState`/`subscribe`/`dispatch` exist, subscribe returns a working unsubscribe, and an unknown action returns `ok: false` without throwing
+- [X] T014 [P] Write `tests/integration/static-export.spec.ts` asserting the built site loads and renders the grid when served from a plain file server with no Next.js runtime
 
 ### Implementation for Phase 2
 
-- [ ] T015 Create `app/globals.css` with the Tailwind v4 `@theme` block declaring all 13 palette tokens from [research.md § R3](./research.md) — the only place palette values may exist
-- [ ] T016 [P] Create `src/engine/grid.ts` with `Digit`, `CellIndex`, `Coord`, index↔coordinate helpers, `boxOf`, and a memoised `peersOf`
-- [ ] T017 [P] Create `src/engine/prng.ts` exporting `createPrng(seed)` — the single source of first-party randomness
-- [ ] T018 [P] Create `src/state/types.ts` with `Cell`, `CellOrigin`, `GameSession`, `SessionStatus`, and `ChangeRecord` per [data-model.md](./data-model.md)
-- [ ] T019 Create `src/state/history.ts` with `pushRecord`, `revertRecord`, and `canUndo` — the undo machinery the Undo *control* will use in US5
-- [ ] T020 Create `src/state/store.ts` with `getState`, `subscribe`, `dispatch`, and the `DispatchResult`/`RejectionReason` types from [contracts/store-actions.md](./contracts/store-actions.md); no React import
-- [ ] T021 Create `src/ui/useStore.ts` binding the store to React through `useSyncExternalStore`
-- [ ] T022 [P] Create `app/layout.tsx` importing `globals.css` and setting page metadata and language
-- [ ] T023 [P] Create `src/ui/Cell.tsx` rendering one static cell with token-derived classes and no interactivity yet
-- [ ] T024 Create `src/ui/Board.tsx` rendering the 9×9 grid with hairline cell separators and heavier 3×3 box framing (FR-053)
-- [ ] T025 Create `src/ui/GameScreen.tsx` composing the board shell
-- [ ] T026 Create `app/page.tsx` mounting `<GameScreen />` as the single route
-- [ ] T027 Add `npm run test:perf` harness in `tests/perf/budgets.spec.ts` enforcing the timing budgets, and **reporting first-load gzipped JS as informational output only** (bundle budget deferred — see [plan.md § Complexity Tracking](./plan.md))
-- [ ] T028 Verify `npm run build` emits `out/` and `npx serve out` renders the grid with zero network requests after load
+- [X] T015 Create `app/globals.css` with the Tailwind v4 `@theme` block declaring all 13 palette tokens from [research.md § R3](./research.md) — the only place palette values may exist
+- [X] T016 [P] Create `src/engine/grid.ts` with `Digit`, `CellIndex`, `Coord`, index↔coordinate helpers, `boxOf`, and a memoised `peersOf`
+- [X] T017 [P] Create `src/engine/prng.ts` exporting `createPrng(seed)` — the single source of first-party randomness
+- [X] T018 [P] Create `src/state/types.ts` with `Cell`, `CellOrigin`, `GameSession`, `SessionStatus`, and `ChangeRecord` per [data-model.md](./data-model.md)
+- [X] T019 Create `src/state/history.ts` with `pushRecord`, `revertRecord`, and `canUndo` — the undo machinery the Undo *control* will use in US5
+- [X] T020 Create `src/state/store.ts` with `getState`, `subscribe`, `dispatch`, and the `DispatchResult`/`RejectionReason` types from [contracts/store-actions.md](./contracts/store-actions.md); no React import
+- [X] T021 Create `src/ui/useStore.ts` binding the store to React through `useSyncExternalStore`
+- [X] T022 [P] Create `app/layout.tsx` importing `globals.css` and setting page metadata and language
+- [X] T023 [P] Create `src/ui/Cell.tsx` rendering one static cell with token-derived classes and no interactivity yet
+- [X] T024 Create `src/ui/Board.tsx` rendering the 9×9 grid with hairline cell separators and heavier 3×3 box framing (FR-053)
+- [X] T025 Create `src/ui/GameScreen.tsx` composing the board shell
+- [X] T026 Create `app/page.tsx` mounting `<GameScreen />` as the single route
+- [X] T027 Add `npm run test:perf` harness in `tests/perf/budgets.spec.ts` enforcing the timing budgets, and **reporting first-load gzipped JS as informational output only** (bundle budget deferred — see [plan.md § Complexity Tracking](./plan.md))
+- [X] T028 Verify `npm run build` emits `out/` and `npx serve out` renders the grid with zero network requests after load
 
-**Checkpoint**: Slice 0 complete — walk the Slice 0 demo in [quickstart.md](./quickstart.md).
+**Checkpoint**: ✅ **Slice 0 COMPLETE** (2026-08-29). Build green, static export verified from a plain
+file server, 40 unit tests and 10 browser tests passing, lint clean, typecheck clean.
+
+Notes from implementation:
+
+- **A regression was caught visually that the tests missed.** The first build had all 81 cells in the
+  DOM and every test passing, but rendered an *invisible* grid: `border-hairline` is not a Tailwind v4
+  width utility (`--spacing-*` does not generate border widths) and preflight sets `border-width: 0`.
+  Counting elements proved nothing. Three tests were added asserting computed border widths are
+  non-zero and that box seams measure heavier than hairlines (FR-053).
+- **Two type-scale tokens were added** (`--text-cell`, `--text-candidate`) because the palette lint rule
+  correctly rejected an arbitrary-value `text-[clamp(...)]` in a component. Components stay token-only.
+- **`@vitest/coverage-v8` was dropped and `.npmrc` sets `legacy-peer-deps`.** npm's arborist crashes
+  walking vitest's optional peer graph (`@vitest/browser` → `webdriverio`), which this project does not
+  use. No task required coverage reporting.
+- **Informational bundle reading: 167 KB gzipped first-load JS** (553 KB raw). Comfortably under the
+  deferred 250 KB budget even with the framework baseline.
 
 ---
 
