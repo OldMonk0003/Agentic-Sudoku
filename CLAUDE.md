@@ -15,18 +15,43 @@ standard. 100% client-side: no server, no database, no network request after loa
 | Feature | State |
 |---|---|
 | [001 — Core play experience](specs/001-sudoku-play-experience/) | **Complete.** 124/124 tasks, 241 unit + 90 browser tests |
-| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 132/132 tasks, 851 unit + 204 browser tests, 11 tools |
+| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 130/132 tasks, 851 unit + 204 browser tests, 11 tools |
+
+## Where things stand (read this first)
+
+Check it rather than trusting it — this section is the thing most likely to be stale:
+
+```bash
+git log --oneline -3 && git rev-parse --abbrev-ref HEAD && cat .specify/feature.json
+```
+
+As of 2026-08-30:
+
+- **Feature 002 is committed on the branch `002-webmcp-agent-tutor` (`b512da6`), and `main` is
+  still at `a5ad72f`.** 002 has *not* been merged. Decide deliberately where a new feature branches
+  from: `002-webmcp-agent-tutor` if it builds on the agent surface, `main` only if it genuinely
+  should not see 002.
+- **Two of 002's tasks are open on purpose**, both recorded at the end of
+  [002/tasks.md](specs/002-webmcp-agent-tutor/tasks.md): T126 (SC-001 unverified against a live
+  agent) and T131 (the feature is one commit, so the test-first ordering Principle V wants is not
+  visible in history).
+- The working tree was clean at that commit, and the full suite was green.
 
 ## Commands
 
 ```bash
-npm test          # Vitest: unit, property, component
-npm run test:e2e  # Playwright end-to-end
-npm run test:a11y # axe, keyboard-only, greyscale
-npm run test:perf # budgets
-npm run lint      # includes layer-boundary enforcement
+npm test             # Vitest: unit, property, component, tool contracts
+npm run test:e2e     # Playwright end-to-end
+npm run test:a11y    # axe, keyboard-only, greyscale
+npm run test:perf    # budgets, including agent tool-call latency
+npm run lint         # includes layer-boundary enforcement
 npm run typecheck
+npm run review:agent # headed agent review harness — see 002/quickstart.md
 ```
+
+Vitest runs **three projects**: `node` (no DOM at all), `component` (jsdom), and `contract`
+(jsdom, `tests/contract/**` — the WebMCP tool contracts). Target one with
+`npx vitest run --project node`.
 
 **Verify builds the way they ship.** `npm run dev` cannot prove there is no server
 runtime — the dev server *is* a server:
@@ -85,6 +110,28 @@ These are easy to violate by accident and each has tests guarding it.
 - **Nothing in `src/tools/` may import `@/engine/solver`** — it exports `solve()`, which returns a
   completed grid. Ask `@/engine/uniqueness` instead; it answers with a boolean.
 
+## The WebMCP API — do not recall it, look it up
+
+**Most secondary sources describe a different API from the one this code targets**, and getting it
+from memory will produce something that looks right and is wrong. The verified IDL, transcribed from
+the published spec, is in [002/research.md § R1](specs/002-webmcp-agent-tutor/research.md) and typed
+in `src/tools/webmcp.d.ts`. The three facts that shaped the whole feature:
+
+| Fact | Consequence in this codebase |
+|---|---|
+| `registerTool` **rejects a duplicate name** with `InvalidStateError` | Registration is not natively idempotent; `registry.ts` guards on a module-level handle |
+| There is **no `unregisterTool`** — teardown is an `AbortSignal` passed at registration | One `AbortController` registers everything, so teardown cannot drift from what was registered |
+| `executeTool` **collapses a rejected handler into an opaque `UnknownError`** | Every handler resolves with a structured result and **never throws** — a rejection destroys the reason the agent needs |
+
+Older/blog descriptions use `navigator.modelContext` with `provideContext()` / `unregisterTool()` /
+`clearContext()`. The constitution mandates `document.modelContext`, and a compatibility shim for
+the other shape would be the abstraction layer Principle I forbids — that is an amendment, not a
+patch.
+
+`tests/support/fakeModelContext.ts` (Node) and `tests/support/browserFakeHost.ts` (page) implement
+the standard strictly, because no browser here ships it. Both are pinned by
+`tests/unit/fakeModelContext.test.ts`, so they cannot quietly become laxer than the real thing.
+
 ## Why State is framework-agnostic
 
 The most consequential decision in the codebase. Constitution Principle I requires the
@@ -102,16 +149,27 @@ feature 002 is no longer buildable.**
 Features proceed `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
 `/speckit-implement`. Artifacts live in `specs/<NNN-name>/`.
 
-**Gotcha:** `.specify/feature.json` names the feature those commands target, and it is
-gitignored — machine-local, absent in a fresh clone. `setup-plan.sh` overwrites
-`plan.md` unconditionally, so pointing it at an already-planned feature destroys that
-plan. Check it before running `/speckit-plan`:
+**What `/speckit-specify` does for you**, so you do not do it by hand:
+
+- Picks the next number by scanning `specs/` — with 001 and 002 present, the next is **003**.
+- Creates `specs/003-<short-name>/spec.md` from the template.
+- **Repoints `.specify/feature.json` at the new feature itself.** You do not need to check or edit
+  it beforehand.
+
+**What it does NOT do: create or switch a git branch.** It prints a `BRANCH_NAME` and an
+`export SPECIFY_FEATURE=…` hint, but the git extension hook is not installed here, so nothing
+touches git. Both existing specs say "Feature Branch: `main`" for that reason, which is now
+misleading — 002 actually lives on `002-webmcp-agent-tutor`. Branch yourself, deliberately.
+
+**The gotcha is `/speckit-plan`, not `/speckit-specify`.** `setup-plan.sh` overwrites `plan.md`
+**unconditionally**, so running it while `feature.json` still points at an already-planned feature
+destroys that plan. Before `/speckit-plan`, confirm the target:
 
 ```bash
 cat .specify/feature.json
 ```
 
-It currently points at `specs/002-webmcp-agent-tutor`.
+`feature.json` is gitignored — machine-local, and absent in a fresh clone.
 
 ## Delivery style
 
@@ -121,10 +179,15 @@ demo script is in [quickstart.md](specs/001-sudoku-play-experience/quickstart.md
 each checkpoint in [tasks.md](specs/001-sudoku-play-experience/tasks.md) records what
 was found along the way.
 
-**Look at the page, don't just run the tests.** Two purely visual defects have shipped
-past a fully green suite in this project: an invisible grid (all 81 cells in the DOM,
-zero borders rendered) and a board shrink-wrapped to half size. Counting elements
-proves nothing about whether anything is drawn.
+**Look at the page, don't just run the tests.** **Three** purely visual defects have shipped past
+a fully green suite in this project: an invisible grid (all 81 cells in the DOM, zero borders
+rendered), a board shrink-wrapped to half size, and an agent annotation whose diagonal hatch ran
+straight through the digit underneath. The third is the instructive one — the palette contrast test
+computes ratios against a *flat* token, while the damage was done by *stripes crossing a glyph*, so
+no assertion could have caught it. Counting elements proves nothing about whether anything is drawn.
+
+Screenshotting is cheap: a throwaway Playwright spec plus the Read tool takes about a minute, and
+it is what caught the hatch.
 
 ## Open items
 
