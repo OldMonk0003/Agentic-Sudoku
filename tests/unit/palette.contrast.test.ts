@@ -43,6 +43,9 @@ const REQUIRED_TOKENS = [
   'ground', 'surface', 'wash-crosshair', 'wash-matching', 'wash-conflict',
   'ring-selected', 'ink-clue', 'ink-player', 'ink-note', 'ink-conflict',
   'line-hairline', 'line-box', 'mark-agent',
+  // Feature 002. Added BEFORE anything rendered, because 001's first candidate
+  // palette failed four of these checks and the order is what caught it.
+  'mark-agent-wash', 'agent-surface', 'agent-edge',
 ];
 
 describe('Japandi palette', () => {
@@ -84,6 +87,50 @@ describe('Japandi palette', () => {
     expect(luminance(ground)).toBeGreaterThan(luminance(crosshair));
     expect(luminance(crosshair)).toBeGreaterThan(luminance(matching));
     expect(contrast(ground, matching)).toBeGreaterThanOrEqual(1.38);
+  });
+
+  /**
+   * Feature 002's annotation surfaces (002/FR-035, 002/contracts/annotation-and-narration.md).
+   *
+   * Agent marks are distinguished by FORM first -- outline, hatch, ray -- because
+   * the learner's own highlighting is entirely wash-based. Colour is the
+   * secondary cue, and these ratios are what keep the primary text legible
+   * underneath a mark rather than being sacrificed to it.
+   */
+  describe('agent annotation surfaces', () => {
+    it.each(['ink-clue', 'ink-player', 'ink-note'])(
+      '%s stays at 4.5:1 on the "because" hatch fill',
+      (ink) => {
+        expect(contrast(tokens[ink]!, tokens['mark-agent-wash']!)).toBeGreaterThanOrEqual(4.5);
+      },
+    );
+
+    it('ink-clue clears 4.5:1 on the agent popup surface', () => {
+      expect(contrast(tokens['ink-clue']!, tokens['agent-surface']!)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('ink-note clears 4.5:1 on the agent popup surface', () => {
+      expect(contrast(tokens['ink-note']!, tokens['agent-surface']!)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it.each(['surface', 'agent-surface', 'ground'])(
+      'the agent edge clears 3.0:1 against %s (WCAG 1.4.11)',
+      (surface) => {
+        expect(contrast(tokens['agent-edge']!, tokens[surface]!)).toBeGreaterThanOrEqual(3.0);
+      },
+    );
+
+    it('the agent mark clears 3.0:1 on both the board and its own wash', () => {
+      // It draws the `target` outline, so it is a non-text graphical object.
+      expect(contrast(tokens['mark-agent']!, tokens['ground']!)).toBeGreaterThanOrEqual(3.0);
+      expect(contrast(tokens['mark-agent']!, tokens['mark-agent-wash']!)).toBeGreaterThanOrEqual(3.0);
+    });
+
+    it('the agent mark is separable from the selection ring in greyscale', () => {
+      // FR-032: the learner must never mistake an agent mark for their own
+      // selection. The ring stays theirs alone.
+      expect(contrast(tokens['mark-agent']!, tokens['ring-selected']!)).toBeGreaterThanOrEqual(1.5);
+    });
   });
 
   it('uses no pure black or pure white anywhere (FR-052)', () => {

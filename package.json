@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test tests/a11y",
+    "review:agent": "playwright test tests/review/agent-demo.spec.ts --headed --project=chromium",
     "test:perf": "playwright test tests/perf"
   },
   "dependencies": {

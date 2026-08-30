@@ -8,6 +8,13 @@ import { ModeToggle } from './ModeToggle';
 import { Timer } from './Timer';
 import { Controls } from './Controls';
 import { CompletionBanner } from './CompletionBanner';
+import { AgentBadge } from './AgentBadge';
+import { ExplanationQueue } from './ExplanationQueue';
+import { AgentToast } from './AgentToast';
+import { PlaybackIndicator } from './PlaybackIndicator';
+import { ConfirmationBanner } from './ConfirmationBanner';
+import { agentStore } from './useAgentStore';
+import { expire, setReducedMotion } from '@/state/agentSession';
 import { resume, loadSession } from '@/state/actions';
 import { store } from '@/state/store';
 import { attachPersistence, restoreSession } from '@/state/persistence';
@@ -43,6 +50,31 @@ export function GameScreen() {
     [],
   );
 
+  /*
+    THE VIEW OWNS THE INTERVAL; THE STORE OWNS THE NUMBER.
+    Annotations and explanations carry an absolute `expiresAt`, and expiry is a
+    pure selector over it -- so the state layer runs no timer and 002/FR-033 is
+    deterministic in tests. This is the only thing that has to tick, and `expire`
+    reports "no change" when nothing aged out, so it cannot cause a render loop.
+  */
+  useEffect(() => {
+    const id = window.setInterval(() => agentStore.dispatch(expire({ now: Date.now() })), 500);
+    return () => window.clearInterval(id);
+  }, []);
+
+  /*
+    Reduced motion is read HERE and published into the store, so the tools layer
+    never queries a media query of its own (002/FR-061). The sequencer reads a
+    value; the browser API stays in the View.
+  */
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const publish = () => agentStore.dispatch(setReducedMotion({ value: query.matches }));
+    publish();
+    query.addEventListener('change', publish);
+    return () => query.removeEventListener('change', publish);
+  }, []);
+
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col items-center gap-6 px-4 py-8 sm:py-12">
       {storageBlocked && (
@@ -61,8 +93,20 @@ export function GameScreen() {
           <DifficultySelect />
           <ModeToggle />
           <Timer />
+          {/* Renders nothing at all when no agent host exists (FR-013). */}
+          <AgentBadge />
         </div>
       </header>
+
+      {/*
+        The agent's voice. Both are polite live regions that never take focus and
+        never block the board (002/FR-018, FR-022, SC-007). They sit ABOVE the
+        board rather than over it, so nothing the agent says can obscure play.
+      */}
+      <ConfirmationBanner />
+      <PlaybackIndicator />
+      <AgentToast />
+      <ExplanationQueue />
 
       <CompletionBanner
         complete={session.status === 'complete'}

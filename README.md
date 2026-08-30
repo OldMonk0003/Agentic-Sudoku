@@ -13,7 +13,7 @@ request after the page loads.
 | Feature | State |
 |---|---|
 | [001 — Core Sudoku play experience](specs/001-sudoku-play-experience/spec.md) | Implemented |
-| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md) | Specified, not yet built |
+| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md) | Implemented — eleven tools on `document.modelContext` |
 
 ## Getting started
 
@@ -38,6 +38,7 @@ npm run dev
 | `npm run test:e2e` | End-to-end tests (Playwright) |
 | `npm run test:a11y` | Accessibility suite (axe + keyboard + greyscale) |
 | `npm run test:perf` | Performance budgets |
+| `npm run review:agent` | Headed agent review harness (see the feature 002 quickstart) |
 | `npm run lint` | ESLint, including the layer-boundary rules |
 | `npm run typecheck` | TypeScript in `strict` mode |
 
@@ -56,8 +57,8 @@ review:
 
 ```
 engine  ←  state  ←  ui
-   ↑
-workers
+   ↑           ↑
+workers      tools
 ```
 
 | Layer | Path | Rules |
@@ -65,7 +66,13 @@ workers
 | **Engine** | `src/engine/` | Pure and deterministic. No DOM, no React, no storage, no timers. Runs in a bare Node process. |
 | **State** | `src/state/` | The single source of truth. Framework-agnostic — imports no React. Every mutation goes through a named action; there is no other write path. |
 | **UI** | `src/ui/` | React client components. Renders state and dispatches actions; holds no gameplay state and computes no game rules. |
+| **Tools** | `src/tools/` | The WebMCP adapter. Validates agent input, calls State actions, serialises results. No game rules, and no DOM outside the registration module. |
 | **Workers** | `src/workers/` | Depends only on Engine. Keeps puzzle generation off the main thread. |
+
+**The UI and the Tools layer never import each other.** They meet only at
+`src/state/agentSession.ts`, in both directions — which is how playback stops when the learner
+touches the board, and how the Disconnect button unregisters tools, without either side knowing the
+other exists. Lint enforces it.
 
 `app/` is deliberately near-empty: the Next.js shell and the design tokens, nothing
 else, so the App Router never becomes a place where logic hides.
@@ -99,6 +106,13 @@ is true by construction rather than retrofitted.
 - **Stored data is untrusted input.** Every field is validated on read, and a
   restored puzzle is re-checked for a unique solution before it reaches a player.
 - **Tests come first.** This is a constitutional requirement, not a preference.
+- **No agent change is silent.** Every write tool is declared through one wrapper that injects the
+  `explanation` property into its schema and rejects a call without it *before* the handler runs. A
+  write tool that forgets to narrate cannot be declared.
+- **Agent text is untrusted.** It is rendered as a text node and nothing else — no markup, no
+  linkification, ever.
+- **With no WebMCP host the site is feature 001 exactly**, down to zero agent-related elements in the
+  accessibility tree. That is the state most browsers are in today.
 
 ## Governance
 

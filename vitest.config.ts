@@ -25,6 +25,18 @@ export default defineConfig({
           include: ['tests/component/**/*.test.tsx'],
         },
       },
+      {
+        // WebMCP tool contract tests. These need a `document` to hang the fake
+        // host off, so they cannot live in the `node` project -- whose no-DOM
+        // guarantee is exactly what tests/unit/tools.surface.test.ts asserts.
+        resolve: { alias },
+        test: {
+          name: 'contract',
+          environment: 'jsdom',
+          globals: true,
+          include: ['tests/contract/**/*.test.ts'],
+        },
+      },
     ],
   },
 });

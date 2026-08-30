@@ -2,6 +2,7 @@
 
 import { DIGITS, colOf, rowOf, toCoord, type CellIndex } from '@/engine/grid';
 import type { HighlightTier } from '@/state/selectors';
+import type { AnnotationRole } from '@/state/agentSession';
 import type { Cell as CellData } from '@/state/types';
 
 /**
@@ -29,6 +30,12 @@ interface CellProps {
    * Without this the whole board is unreachable by keyboard on a fresh load.
    */
   readonly tabbable: boolean;
+  /**
+   * The agent's mark on this cell, if any. Carried into the LABEL as well as the
+   * overlay, so a screen-reader learner arrowing the board hears it in place
+   * rather than only in the announcement (002/FR-060, SC-011).
+   */
+  readonly annotation?: AnnotationRole | null;
   readonly onSelect: (index: CellIndex) => void;
 }
 
@@ -74,30 +81,57 @@ function weightClass(tier: HighlightTier, cell: CellData): string {
   return 'font-normal';
 }
 
+/**
+ * Ink and slant are ORTHOGONAL cues and must compose.
+ *
+ * The first version returned early on conflict, which silently dropped the
+ * italic from an agent digit that happened to be wrong -- and that is precisely
+ * the case where authorship matters most. 002/FR-038 lets the tutor be wrong on
+ * purpose so the learner can check it; if the wrong digit stops looking like the
+ * agent's, the learner cannot tell whose mistake they are looking at.
+ *
+ * So: colour says whether the digit CONFLICTS, slant says WHO WROTE IT, and
+ * neither erases the other.
+ */
 function inkClass(cell: CellData, conflict: boolean): string {
-  if (conflict) return 'text-ink-conflict';
+  const slant = cell.origin === 'agent' ? ' italic' : '';
+
+  if (conflict) return `text-ink-conflict${slant}`;
   if (cell.origin === 'clue') return 'text-ink-clue';
-  if (cell.origin === 'agent') return 'text-ink-player italic';
-  return 'text-ink-player';
+  return `text-ink-player${slant}`;
 }
 
-function describe(row: number, col: number, cell: CellData, conflict: boolean): string {
+function describe(
+  row: number,
+  col: number,
+  cell: CellData,
+  conflict: boolean,
+  annotation: AnnotationRole | null,
+): string {
   const where = `Row ${row}, column ${col}`;
   const notes = [...cell.candidates].sort().join(' ');
+  // Authorship is spoken, not only shown: a screen-reader learner must be able
+  // to tell their own entries from the agent's on equal terms (002/FR-060).
   const what =
     cell.value === null
       ? cell.candidates.size > 0
-        ? `notes ${notes}`
+        ? `notes ${notes}${cell.origin === 'agent' ? ', placed by agent' : ''}`
         : 'empty'
       : cell.origin === 'clue'
         ? `${cell.value}, given`
-        : String(cell.value);
+        : cell.origin === 'agent'
+          ? `${cell.value}, placed by agent`
+          : String(cell.value);
   // The conflict is named in the label itself, so a screen reader hears it in
   // place rather than only via the live region (FR-026, FR-047).
-  return `${where}, ${what}${conflict ? ', conflict' : ''}`;
+  const marked =
+    annotation === 'target' ? ', agent target' : annotation === 'because' ? ', agent reason' : '';
+  return `${where}, ${what}${conflict ? ', conflict' : ''}${marked}`;
 }
 
-export function Cell({ index, colIndex, cell, tier, conflict, selected, tabbable, onSelect }: CellProps) {
+export function Cell({
+  index, colIndex, cell, tier, conflict, selected, tabbable, annotation = null, onSelect,
+}: CellProps) {
   const { row, col } = toCoord(index);
   const origin = cell.value === null ? 'empty' : cell.origin;
 
@@ -110,7 +144,7 @@ export function Cell({ index, colIndex, cell, tier, conflict, selected, tabbable
     <button
       type="button"
       role="gridcell"
-      aria-label={describe(row, col, cell, conflict)}
+      aria-label={describe(row, col, cell, conflict, annotation)}
       aria-selected={selected}
       tabIndex={tabbable ? 0 : -1}
       aria-colindex={colIndex}
@@ -162,6 +196,36 @@ export function Cell({ index, colIndex, cell, tier, conflict, selected, tabbable
           ))}
         </span>
       )}
+      {/*
+        The agent's authorship mark (002/FR-044).
+        TWO cues, neither of them colour alone: the digit is ITALIC (see
+        inkClass) and carries a sage corner glyph. That is what lets a learner
+        tell their own entries from the agent's at a glance, without hovering,
+        and still tell them apart in greyscale and under any colour vision
+        deficiency (002/SC-004). Agent digits share the player ink deliberately:
+        001's palette research found that a third ink could not clear 4.5:1 on
+        every wash tier.
+      */}
+      {cell.origin === 'agent' && cell.value !== null && (
+        <span
+          data-agent-placed="true"
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 left-0 h-0 w-0 border-t-6 border-l-6 border-t-mark-agent border-l-transparent"
+        />
+      )}
+
+      {/*
+        Agent-written pencil candidates carry the same mark, smaller, so the
+        learner can tell whose bookkeeping they are looking at (002/FR-044).
+      */}
+      {cell.origin === 'agent' && cell.value === null && cell.candidates.size > 0 && (
+        <span
+          data-agent-candidates="true"
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 left-0 h-0 w-0 border-t-4 border-l-4 border-t-mark-agent border-l-transparent"
+        />
+      )}
+
       {/*
         The NON-COLOUR cue for a conflict (FR-026). The author's brief specified
         "soft red"; Principle V forbids conveying anything by colour alone, so the

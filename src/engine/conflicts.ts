@@ -13,9 +13,21 @@ import { ALL_INDICES, unitIndices, type CellIndex, type Digit } from './grid';
  */
 
 /** The 27 units of a Sudoku board, built once at module load. */
-const UNITS: readonly (readonly CellIndex[])[] = (['row', 'col', 'box'] as const).flatMap((kind) =>
-  [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => unitIndices(kind, n)),
-);
+const NAMED_UNITS: readonly { kind: UnitKind; n: number; indices: readonly CellIndex[] }[] = (
+  ['row', 'col', 'box'] as const
+).flatMap((kind) => [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ kind, n, indices: unitIndices(kind, n) })));
+
+const UNITS: readonly (readonly CellIndex[])[] = NAMED_UNITS.map((unit) => unit.indices);
+
+export type UnitKind = 'row' | 'col' | 'box';
+
+/** One duplication: which unit, which digit, and every cell taking part. */
+export interface ConflictGroup {
+  readonly kind: UnitKind;
+  readonly n: number;
+  readonly digit: Digit;
+  readonly indices: readonly CellIndex[];
+}
 
 /**
  * Every cell participating in a duplication within any row, column, or box.
@@ -39,6 +51,35 @@ export function findConflicts(values: readonly (Digit | null)[]): ReadonlySet<Ce
   }
 
   return conflicts;
+}
+
+/**
+ * The same duplications, grouped by the unit and digit that collide.
+ *
+ * `findConflicts` answers "which cells are wrong-looking", which is what the
+ * board needs to paint. An agent needs to know WHICH cells collide with WHICH,
+ * so it can explain the collision (002/FR-025) -- and working that out is a game
+ * rule, so it lives here rather than in a tool handler (Principle III).
+ *
+ * Like `findConflicts`, it reads the visible board only and can never consult a
+ * solution.
+ */
+export function findConflictGroups(values: readonly (Digit | null)[]): readonly ConflictGroup[] {
+  const groups: ConflictGroup[] = [];
+
+  for (const unit of NAMED_UNITS) {
+    const seen = new Map<Digit, CellIndex[]>();
+    for (const index of unit.indices) {
+      const digit = values[index];
+      if (digit == null) continue;
+      seen.set(digit, [...(seen.get(digit) ?? []), index]);
+    }
+    for (const [digit, indices] of seen) {
+      if (indices.length > 1) groups.push({ kind: unit.kind, n: unit.n, digit, indices });
+    }
+  }
+
+  return groups;
 }
 
 /** Whether every cell holds a digit. Completion also requires zero conflicts. */

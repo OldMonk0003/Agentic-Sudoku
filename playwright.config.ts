@@ -7,6 +7,9 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: /.*\.spec\.ts/,
+  // The headed review harness is a manual review aid, not a check. It pauses
+  // waiting for a human, so it must never run in CI (`npm run review:agent`).
+  testIgnore: /tests\/review\/.*/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',

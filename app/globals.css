@@ -41,8 +41,21 @@
   --color-line-hairline: #DCD3C3;   /* decorative cell subdivision */
   --color-line-box: #8B8175;        /* structural box framing */
 
-  /* Reserved for feature 002 */
-  --color-mark-agent: #5E7A63;      /* sage corner glyph on agent-placed digits */
+  /*
+   * Feature 002 — the agent's marks.
+   *
+   * Agent annotations are distinguished from the learner's own highlighting by
+   * FORM first: outlines, hatching, and rays, where the learner's highlighting
+   * is entirely flat washes. That is what survives greyscale and every colour
+   * vision deficiency (002/FR-032, FR-035). Colour is the second cue, never the
+   * only one.
+   *
+   * Every ratio below was computed before anything rendered, as in R3.
+   */
+  --color-mark-agent: #5E7A63;      /* target outline, beams, agent corner glyph */
+  --color-mark-agent-wash: #C8D6C7; /* the 'because' hatch; inks clear 4.5:1 on it */
+  --color-agent-surface: #EEF2EC;   /* explanation popups, toast, confirmation */
+  --color-agent-edge: #4E6A53;      /* their border and the connected badge */
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
@@ -55,6 +68,51 @@ html,
 body {
   background-color: var(--color-ground);
   color: var(--color-ink-clue);
+}
+
+/*
+ * The 'because' hatch (002/FR-028, FR-035).
+ *
+ * A class rather than an arbitrary-value utility, because the palette may exist
+ * in exactly one place and lint enforces that. The DIAGONAL STRIPING is the
+ * primary cue -- it is a pattern, not a tint, so it survives greyscale and stays
+ * separable from the learner's flat washes even when one is underneath.
+ */
+.agent-hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-mark-agent-wash) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+/*
+ * The beam draw-in (002/FR-029, FR-061).
+ *
+ * The sweep is not decoration: a ray that grows along its unit shows the
+ * DIRECTION of the constraint, which is the thing being taught. It is applied
+ * only when the learner has not asked for reduced motion -- the AnnotationLayer
+ * reads that from the agent store rather than from a media query, so the tools
+ * layer never touches one.
+ *
+ * The global reduced-motion rule below neutralises it as a second line of
+ * defence, and both are deliberate.
+ */
+@keyframes agent-beam-sweep {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes agent-beam-sweep-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.agent-beam-row {
+  transform-origin: left center;
+  animation: agent-beam-sweep 220ms ease-out;
+}
+.agent-beam-col {
+  transform-origin: center top;
+  animation: agent-beam-sweep-y 220ms ease-out;
 }
 
 /* Principle V: motion is reduced or removed on request, with no exceptions. */

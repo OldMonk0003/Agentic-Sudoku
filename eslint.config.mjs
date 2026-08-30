@@ -27,6 +27,20 @@ export default tseslint.config(
           { target: './src/ui',     from: './app',       message: 'UI must not import the Next.js shell (Principle III).' },
           { target: './src/workers', from: './src/state', message: 'Workers depend only on Engine (Principle III).' },
           { target: './src/workers', from: './src/ui',    message: 'Workers depend only on Engine (Principle III).' },
+
+          /**
+           * Feature 002. Tools and View sit at the SAME layer, so neither may
+           * import the other: they communicate only through the agent session
+           * store (specs/002-webmcp-agent-tutor/contracts/agent-session-store.md).
+           * That is what lets playback stop on learner input, and the Disconnect
+           * button unregister tools, without either side knowing the other exists.
+           */
+          { target: './src/ui',      from: './src/tools', message: 'UI must not import Tools. They meet only at src/state/agentSession.ts (002 plan, Structure Decision).' },
+          { target: './src/tools',   from: './src/ui',    message: 'Tools must not import UI. Tool handlers must not touch the DOM (Principle III).' },
+          { target: './src/engine',  from: './src/tools', message: 'Engine must not import Tools (Principle III).' },
+          { target: './src/state',   from: './src/tools', message: 'State must not import Tools (Principle III).' },
+          { target: './src/workers', from: './src/tools', message: 'Workers depend only on Engine (Principle III).' },
+          { target: './src/tools',   from: './app',       message: 'Tools must not import the Next.js shell (Principle III).' },
         ],
       }],
       'import/no-cycle': ['error', { maxDepth: Infinity }],
@@ -40,7 +54,7 @@ export default tseslint.config(
      * place it can be audited for contrast (constitution, Technology Constraints).
      * Raw hex or arbitrary-value utilities in a component are a lint failure.
      */
-    files: ['src/ui/**/*.tsx', 'app/**/*.tsx'],
+    files: ['src/ui/**/*.tsx', 'src/tools/**/*.tsx', 'app/**/*.tsx'],
     rules: {
       'no-restricted-syntax': ['error',
         {

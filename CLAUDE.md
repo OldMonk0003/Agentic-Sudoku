@@ -15,7 +15,7 @@ standard. 100% client-side: no server, no database, no network request after loa
 | Feature | State |
 |---|---|
 | [001 — Core play experience](specs/001-sudoku-play-experience/) | **Complete.** 124/124 tasks, 241 unit + 90 browser tests |
-| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md) | Specified, not planned or built |
+| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 132/132 tasks, 851 unit + 204 browser tests, 11 tools |
 
 ## Commands
 
@@ -39,12 +39,18 @@ npm run build && npm start
 
 ```
 engine  ←  state  ←  ui          workers → engine only
+              ↑
+            tools                tools ↔ ui: FORBIDDEN, both directions
 ```
 
 - `src/engine/` — pure, deterministic. **No DOM, React, storage, or timers.** Runs in bare Node.
 - `src/state/` — single source of truth. **Imports no React.** Every mutation goes through a named action in `actions.ts`; there is no other write path.
 - `src/ui/` — React client components. Renders state, dispatches actions. No game rules, no gameplay state of its own.
-- `app/` — Next.js shell and design tokens only. Never put logic here.
+- `src/tools/` — the WebMCP adapter. Thin handlers over State actions; **no game rules**, and **no
+  `document` outside `registry.ts`** (both asserted by `tests/unit/tools.layering.test.ts`).
+- `app/` — Next.js shell and design tokens only. Never put logic here. The one exception is
+  `<AgentBootstrap />`: a server component's imports never reach the browser, and a static export has
+  no server runtime, so registration has to be pulled in by a client module.
 
 `eslint-plugin-import` will fail the build on a wrong-direction import. That rule has
 already caught one real violation (Engine importing types from State); trust it.
@@ -70,6 +76,14 @@ These are easy to violate by accident and each has tests guarding it.
 - **`origin` is a parameter on every mutating action** (`'clue' | 'player' | 'agent'`).
   Do not hardcode `'player'` — feature 002 reuses these actions unchanged, and that is
   what makes "an agent's move undoes exactly like a human's" true by construction.
+- **Agent writes are coordinate-addressed** (`enterDigitAt`, not `enterDigit`). An agent must never
+  move the learner's selection; the selection-based forms delegate to the coordinate ones so both
+  actors run one implementation.
+- **Every write tool goes through `defineWriteTool`.** It injects `explanation` into the schema and
+  validates it before the handler runs, so "nothing changes silently" is structural rather than
+  nine implementations being careful.
+- **Nothing in `src/tools/` may import `@/engine/solver`** — it exports `solve()`, which returns a
+  completed grid. Ask `@/engine/uniqueness` instead; it answers with a boolean.
 
 ## Why State is framework-agnostic
 
@@ -120,5 +134,11 @@ proves nothing about whether anything is drawn.
 - **The 250 KB bundle budget is deferred** by author decision, recorded in
   [plan.md § Complexity Tracking](specs/001-sudoku-play-experience/plan.md). CI reports
   the number (currently ~189 KB gzipped) but nothing gates on it.
-- **`src/state/actions.ts` is at 296 lines**, just under Principle III's 300-line review
-  trigger. Feature 002's agent actions will push it over — plan the split.
+- **Drills exist for three of five techniques.** `naked-single` and `x-wing` have none: measured
+  against `requiresTechnique`, no qualifying puzzle appeared in hundreds of thousands of candidates.
+  FR-054 handles it by design, but **the spec's own worked example is an X-Wing drill**, so this
+  wants a scope decision — accept three, or add a harder technique module so X-Wing-exact puzzles
+  become findable.
+- **SC-001 has not been verified against a live agent.** Nothing in this environment implements
+  `document.modelContext`, so the surface has only ever been driven through a spec-conformant fake.
+  Point a real agent at it before believing the "no site-specific instructions" claim.

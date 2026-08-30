@@ -37,7 +37,11 @@ test('announces conflicts politely, without stealing focus', async ({ page }) =>
   await cell.click();
   await page.keyboard.press(digit);
 
-  const region = page.locator('[role="status"][aria-live="polite"]');
+  // Scoped by test id rather than by role. Feature 002 added agent live regions
+  // (the explanation queue and the annotation summary), so "the only polite
+  // status region on the page" stopped being a statement about conflicts. The
+  // requirement is unchanged: ONE conflict announcement, polite, no focus steal.
+  const region = page.getByTestId('conflict-announcement');
   await expect(region).toHaveCount(1);
   await expect(region).toContainText(/conflict/i);
 

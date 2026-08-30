@@ -5,7 +5,10 @@ import { ALL_INDICES, toCoord, toIndex, type CellIndex, type Digit } from '@/eng
 import { enterDigit, eraseCell, moveSelection, selectCell, toggleCandidate, toggleInputMode } from '@/state/actions';
 import { boardTiers, conflictSet } from '@/state/selectors';
 import { Cell } from './Cell';
+import { AnnotationLayer } from './AnnotationLayer';
 import { store, useSession } from './useStore';
+import { agentStore, useAgentSession } from './useAgentStore';
+import { annotatedRoles, learnerActed } from '@/state/agentSession';
 import type { Direction } from '@/state/actions';
 
 /**
@@ -28,10 +31,22 @@ const ARROWS: Record<string, Direction> = {
 
 export function Board() {
   const session = useSession();
+  const agentSession = useAgentSession();
   // Computed per render, never stored -- FR-028 holds by construction.
   const conflicts = conflictSet(session);
   const tiers = boardTiers(session, conflicts);
+  const annotations = annotatedRoles(agentSession, Date.now());
   const gridRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The interruption signal (002/FR-048).
+   *
+   * The board raises a counter; the playback sequencer in the Tools layer
+   * watches it. This component does not know that playback exists, and lint
+   * forbids it from importing anything that does -- they meet only at the agent
+   * session store.
+   */
+  const noteLearnerActivity = () => agentStore.dispatch(learnerActed());
 
   // Move programmatic focus with the selection, so keyboard and screen-reader
   // navigation stay in step (FR-047).
@@ -42,7 +57,10 @@ export function Board() {
     if (cell && document.activeElement !== cell) cell.focus({ preventScroll: true });
   }, [session.selection]);
 
-  const onSelect = (index: CellIndex) => store.dispatch(selectCell(toCoord(index)));
+  const onSelect = (index: CellIndex) => {
+    noteLearnerActivity();
+    store.dispatch(selectCell(toCoord(index)));
+  };
 
   // Exactly one cell is tabbable: the selection, or the first cell when there is
   // none. Otherwise Tab skips the board entirely (FR-046, SC-005).
@@ -50,6 +68,7 @@ export function Board() {
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const { key } = event;
+    noteLearnerActivity();
 
     if (key in ARROWS) {
       event.preventDefault();
@@ -90,8 +109,32 @@ export function Board() {
       ? ''
       : `${conflicts.size} cell${conflicts.size === 1 ? '' : 's'} in conflict`;
 
+  const describeCells = (role: 'target' | 'because') =>
+    [...annotations.entries()]
+      .filter(([, value]) => value === role)
+      .map(([index]) => `row ${Math.floor(index / 9) + 1} column ${(index % 9) + 1}`)
+      .join(', ');
+
+  const annotationMessage = (() => {
+    if (annotations.size === 0) return '';
+    const targets = describeCells('target');
+    const because = describeCells('because');
+    return [
+      targets && `Agent highlighted ${targets} as the target`,
+      because && `justified by ${because}`,
+    ]
+      .filter(Boolean)
+      .join(', ') + '.';
+  })();
+
   return (
     <>
+    {/*
+      The positioning context for the annotation overlay. The overlay must be a
+      SIBLING of the grid, never a child: role="grid" requires role="row"
+      children and axe flags anything else as critical (001 learned this).
+    */}
+    <div className="relative w-full max-w-[min(92vw,34rem)]">
     <div
       ref={gridRef}
       role="grid"
@@ -102,7 +145,7 @@ export function Board() {
       onKeyDown={onKeyDown}
       className={[
         'grid grid-cols-9',
-        'w-full max-w-[min(92vw,34rem)] aspect-square',
+        'w-full aspect-square',
         'bg-ground',
         'border-2 border-solid border-line-box',
         // A skeleton, never a blank page or a blocking spinner (SC-011).
@@ -123,6 +166,7 @@ export function Board() {
               colIndex={col + 1}
               cell={session.cells[index]!}
               tier={tiers[index]!}
+              annotation={annotations.get(index) ?? null}
               conflict={conflicts.has(index)}
               selected={session.selection !== null && toIndex(session.selection) === index}
               tabbable={index === tabbableIndex}
@@ -132,8 +176,18 @@ export function Board() {
         </div>
       ))}
     </div>
-    <p role="status" aria-live="polite" className="sr-only">
+    <AnnotationLayer />
+    </div>
+    <p data-testid="conflict-announcement" role="status" aria-live="polite" className="sr-only">
       {conflictMessage}
+    </p>
+    {/*
+      002/FR-060 and SC-011: a screen-reader learner must be able to determine
+      every annotated cell. Announced politely, never taking focus; the cell's
+      own label carries the same fact in place, for a learner arrowing the board.
+    */}
+    <p data-testid="annotation-announcement" role="status" aria-live="polite" className="sr-only">
+      {annotationMessage}
     </p>
     </>
   );
