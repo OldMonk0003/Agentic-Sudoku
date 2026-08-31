@@ -16,7 +16,11 @@ import AxeBuilder from '@axe-core/playwright';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('[role="gridcell"]');
+  // Wait for GENERATION to finish, not merely for cells to exist. Reading a
+  // cell's label mid-generation compares two different boards, which made the
+  // "announcements are unchanged" test fail under parallel load.
+  await page.locator('[role="grid"][aria-busy="false"]').waitFor();
+  await page.locator('[role="gridcell"][data-origin="clue"]').first().waitFor();
 });
 
 const toggle = (page: Page) =>

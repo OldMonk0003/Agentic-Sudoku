@@ -29,6 +29,12 @@ test('not one request leaves the page across the entire agent surface', async ({
   await callTool(page, 'show_pattern_hint_toast', { explanation });
   await callTool(page, 'draw_constraint_beams', { beams: [{ unit_type: 'row', unit_number: row }], explanation });
   await callTool(page, 'fill_cell', { row, col, digit: 7, explanation });
+  // Feature 003's ruler and clock tools. Order-insensitive, so they sit here.
+  await callTool(page, 'show_coordinate_ruler', { explanation });
+  await callTool(page, 'hide_coordinate_ruler', { explanation });
+  await callTool(page, 'pause_timer', { explanation });
+  await callTool(page, 'resume_timer', { explanation });
+
   await callTool(page, 'update_pencil_marks', {
     cells: [{ row: row === 9 ? 1 : row + 1, col, digits: [1, 2] }],
     explanation,
@@ -43,7 +49,25 @@ test('not one request leaves the page across the entire agent surface', async ({
   await page.getByRole('button', { name: 'Load drill' }).click();
   await drill;
 
-  expect(afterLoad).toEqual([]);
+  /*
+    `switch_difficulty` last, and ANSWERED rather than awaited blind.
+
+    It generates a whole new puzzle, which is the most plausible place a network
+    request could ever creep in -- so it belongs in this sweep more than most.
+    But by now the board has progress on it, so it raises a confirmation and
+    waits up to a minute for a human. Awaiting it without answering would hang
+    the test for the tool behaving exactly as FR-030 requires.
+  */
+  const switching = callTool(page, 'switch_difficulty', { difficulty: 'medium', explanation });
+
+  // Whether it asks depends on whether the drill left progress behind, so
+  // answer only if a banner actually appears rather than assuming either way.
+  const banner = page.getByRole('button', { name: /switch puzzle/i });
+  await banner.click({ timeout: 2000 }).catch(() => {});
+
+  expect((await switching).ok).toBe(true);
+
+  expect(afterLoad, `unexpected requests: ${afterLoad.join(', ')}`).toEqual([]);
 });
 
 test('no tool result carries the puzzle solution (FR-026, FR-058)', async ({ page }) => {

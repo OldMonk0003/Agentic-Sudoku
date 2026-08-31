@@ -233,18 +233,18 @@ resume too.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T084 Run the full suite: `npm test && npm run test:e2e && npm run test:a11y && npm run test:perf && npm run lint && npm run typecheck`
-- [ ] T085 [P] Extend `tests/integration/agent-no-network.spec.ts` to all 16 tools, asserting zero network requests after load (FR-046, 001/FR-043)
-- [ ] T086 [P] Extend `tests/a11y/agent-full-sweep.spec.ts` to every new state: ruler shown, spotlight live, confirmation pending, agent-paused
-- [ ] T087 Run `npm run build && npm start` and verify the static export runs from a plain file server with no server runtime (Definition of Done #9)
-- [ ] T088 Measure and **record** p95 for the four budgeted new tools in this file, and record `switch_difficulty`'s exemption alongside the two 002 already carries (Definition of Done #5)
-- [ ] T089 Record the gzipped first-load bundle number — informational only, the budget stays deferred
-- [ ] T090 [P] Update `README.md`: the status table gains feature 003, and the tool count moves from eleven to sixteen
-- [ ] T091 [P] Update `CLAUDE.md`: feature 003's state, the third store and its separate storage key, the Tools↔UI seam that `switch_difficulty` uses, the ruler's exemption from 002/FR-033, and the new tool count
-- [ ] T092 [P] Document all five new tools with schema and example invocation in the registry module (Definition of Done #6)
-- [ ] T093 Review every touched module against Principle III's ~300-line trigger — `agentSession.ts`, `agentReduce.ts`, `narration.ts`, and `Board.tsx` all grow in this feature — and split anything over, as 002 did twice
-- [ ] T094 Walk [quickstart.md](./quickstart.md) end to end and record what it found
-- [ ] T095 Confirm the two deviations in [plan.md § Complexity Tracking](./plan.md#complexity-tracking) still read true against what was actually built
+- [X] T084 Run the full suite: `npm test && npm run test:e2e && npm run test:a11y && npm run test:perf && npm run lint && npm run typecheck`
+- [X] T085 [P] Extend `tests/integration/agent-no-network.spec.ts` to all 16 tools, asserting zero network requests after load (FR-046, 001/FR-043)
+- [X] T086 [P] Extend `tests/a11y/agent-full-sweep.spec.ts` to every new state: ruler shown, spotlight live, confirmation pending, agent-paused
+- [X] T087 Run `npm run build && npm start` and verify the static export runs from a plain file server with no server runtime (Definition of Done #9)
+- [X] T088 Measure and **record** p95 for the four budgeted new tools in this file, and record `switch_difficulty`'s exemption alongside the two 002 already carries (Definition of Done #5)
+- [X] T089 Record the gzipped first-load bundle number — informational only, the budget stays deferred
+- [X] T090 [P] Update `README.md`: the status table gains feature 003, and the tool count moves from eleven to sixteen
+- [X] T091 [P] Update `CLAUDE.md`: feature 003's state, the third store and its separate storage key, the Tools↔UI seam that `switch_difficulty` uses, the ruler's exemption from 002/FR-033, and the new tool count
+- [X] T092 [P] Document all five new tools with schema and example invocation in the registry module (Definition of Done #6)
+- [X] T093 Review every touched module against Principle III's ~300-line trigger — `agentSession.ts`, `agentReduce.ts`, `narration.ts`, and `Board.tsx` all grow in this feature — and split anything over, as 002 did twice
+- [X] T094 Walk [quickstart.md](./quickstart.md) end to end and record what it found
+- [X] T095 Confirm the two deviations in [plan.md § Complexity Tracking](./plan.md#complexity-tracking) still read true against what was actually built
 
 ---
 
@@ -252,6 +252,79 @@ resume too.
 
 - [ ] T096 **Confirm the ruler's colour with the author.** The supplied screenshot shows the row and column numbers in a saturated red; the implementation uses `--color-ink-note` because red would borrow the board's conflict vocabulary and break 001/FR-052 ([research.md § R6](./research.md)). Everything else in the screenshot is reproduced as shown. If the red was load-bearing rather than incidental, this becomes a **palette amendment with a contrast re-run**, not a component change
 - [ ] T097 **SC-001 of feature 002 remains unverified against a live agent**, and this feature enlarges the untested contact area from eleven tools to sixteen. Nothing in this environment implements `document.modelContext`, so the whole surface has still only ever been driven through a spec-conformant fake. Point a real agent at it before believing the "no site-specific instructions" claim
+
+**Checkpoint**: ✅ **FEATURE 003 COMPLETE** (2026-08-31). **1183 unit/contract/component tests and
+263 browser tests**, lint and typecheck clean, static export verified. Sixteen tools at surface
+version 1.1.0.
+
+### Three defects found along the way, none by the test suite alone
+
+**1. The spotlight read as a mesh, not a spotlight.** The first implementation drew a dashed rule
+around *every* cell in the band. Twenty-one boxed cells fought the grid's own 3×3 structure and
+obscured the board instead of pointing at it — and **every test passed**. Only the screenshot showed
+it. The fix draws only the edges facing *out* of the band, giving one outline around the union of
+row, column, and box. That is the fourth purely visual defect in this project to survive a green
+suite, and the second to be caught only by looking.
+
+**2. `npm run review:agent` had never worked.** `playwright.config.ts` carries
+`testIgnore` for `tests/review/**` so the harnesses never run in CI — but `testIgnore` applies even
+when a file is named explicitly on the command line, so 002's documented review harness matched zero
+tests and silently did nothing. The harnesses now have their own config.
+
+**3. `agent-parity.spec.ts` was flaky and nobody had noticed.** It hardcoded cell index 40, which is
+a starting clue on some generated boards — and pencilling into a clue correctly does nothing. It
+failed roughly one run in five. It now picks an empty non-clue cell.
+
+Two of the three were **pre-existing**, inherited from 002 rather than introduced here.
+
+### Also found: three races in this feature's own new specs
+
+All the same class — acting while the board was still `aria-busy` generating, so writes were
+correctly rejected with `wrong-status`. Fixed by using 002's existing `openWithAgent` helper, which
+waits properly. Worth stating plainly because the first instinct was to call them flakes and retry.
+
+### Verified
+
+| Check | Result |
+|---|---|
+| Tool surface, enumerated with no DOM | 16 tools, unique snake_case names, strict schemas, version 1.1.0 |
+| 002's eleven tools unchanged | All present, no schema narrowed — asserted headlessly and in the browser |
+| Agent tool call p95 | `get_board_state` 0.1 ms, `fill_cell` 0.1 ms, `pause_timer` 0.1 ms, `resume_timer` 0.1 ms, `check_for_conflicts` 0.2 ms, `clear_visual_annotations` 0.3 ms, `show_pattern_hint_toast` 0.4 ms, `show_coordinate_ruler` 0.6 ms, `draw_constraint_beams` 0.8 ms, `auto_fill_all_pencil_marks` 0.8 ms, `update_pencil_marks` 1.1 ms, `highlight_pattern_cells` 1.4 ms, `hide_coordinate_ruler` 1.6 ms — against a 100 ms budget |
+| Exempt tools | `playback_deduction_sequence`, `load_technique_practice`, `switch_difficulty` — recorded deviation |
+| Generation never blocks the learner | No long task during `switch_difficulty` |
+| Hostile inputs | 19 payloads × 16 tools; none throws, none changes the board when refused |
+| Solution leakage | None, across all 16 tools on a nearly-solved board |
+| axe | No violations across every 003 state, including ruler + crosshair + spotlight + agent pause together |
+| Greyscale | Dashed spotlight perimeter stays distinct from the learner's solid ring with no colour at all |
+| 360 px with the ruler | Cells above 24 px, no horizontal overflow, labels legible — screenshotted and read |
+| No-host parity | Ruler toggle present and working; zero agent elements |
+| Network requests after load | Zero, across all 16 tools including `switch_difficulty`'s generation |
+| localStorage | No spotlight, no ruler field in the session payload; **session `SCHEMA_VERSION` still 1** |
+| Existing saved games | Still restore — no migration was needed |
+| Layer boundaries | `tools ↔ ui` forbidden both ways, now asserted by test as well as lint |
+| Largest module | 292 lines (`src/ui/Cell.tsx`) — everything under the 300-line trigger |
+| Bundle | **206.7 KB gzipped first load**, informational only (budget still deferred) |
+| Commit history | Tests committed before implementation, one pair per phase — **002's T131 closed by example** |
+
+### The two open items, honestly
+
+Both are recorded rather than quietly closed, in the same spirit as 002's T126 and T131.
+
+**T096 — the ruler's colour is a decision, not a confirmation.** The supplied screenshot shows the
+row and column numbers in a saturated red. The implementation uses `--color-ink-note`, because
+001/FR-052 mandates a warm low-saturation palette and `--color-ink-conflict` is commented *"muted
+clay, never alert red"* — red in the gutters would borrow the board's conflict vocabulary for
+something that is not a conflict. **Everything else in the screenshot is reproduced as shown.** This
+has been raised with the author but not yet answered. If the red was load-bearing rather than
+incidental, it becomes a palette amendment in `app/globals.css` with a contrast re-run, not a
+component change.
+
+**T097 — SC-001 is still unverified against a live agent, and this feature made the gap bigger.**
+Nothing in this environment implements `document.modelContext`, so all sixteen tools have only ever
+been driven through a spec-conformant fake. The fake is pinned by
+`tests/unit/fakeModelContext.test.ts` so it cannot become laxer than the standard, and the tool
+descriptions were written for an agent that has never seen this site — but that is a claim, not a
+measurement. **Point a real agent at it before believing it.**
 
 ---
 

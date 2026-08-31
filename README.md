@@ -14,6 +14,7 @@ request after the page loads.
 |---|---|
 | [001 — Core Sudoku play experience](specs/001-sudoku-play-experience/spec.md) | Implemented |
 | [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md) | Implemented — eleven tools on `document.modelContext` |
+| [003 — Agent board controls & coordinate ruler](specs/003-agent-board-controls/spec.md) | Implemented — **sixteen tools**, a coordinate ruler, and an agent spotlight |
 
 ## Getting started
 
@@ -39,6 +40,7 @@ npm run dev
 | `npm run test:a11y` | Accessibility suite (axe + keyboard + greyscale) |
 | `npm run test:perf` | Performance budgets |
 | `npm run review:agent` | Headed agent review harness (see the feature 002 quickstart) |
+| `npm run review:003` | Screenshot harness for the ruler and spotlight, at 360px and desktop |
 | `npm run lint` | ESLint, including the layer-boundary rules |
 | `npm run typecheck` | TypeScript in `strict` mode |
 

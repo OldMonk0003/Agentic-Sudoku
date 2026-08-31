@@ -106,3 +106,48 @@ test('every agent surface is a polite status region, and none is a dialog', asyn
   }
   expect(await page.locator('[role="dialog"], [role="alertdialog"], [aria-modal="true"]').count()).toBe(0);
 });
+
+/**
+ * Feature 003's new states, added to the sweep (FR-016, FR-020, FR-025).
+ *
+ * Each is a state the board can be in that did not exist before, and each is
+ * checked with axe on the whole page rather than on the new element alone --
+ * the interesting failures are interactions, not the components in isolation.
+ */
+test('axe is clean across every state feature 003 adds', async ({ page }) => {
+  await openWithAgent(page);
+
+  const explanation = 'A perfectly ordinary explanation, long enough to satisfy the contract here.';
+
+  // 1. The coordinate ruler.
+  await callTool(page, 'show_coordinate_ruler', { explanation });
+  await expect(page.getByTestId('ruler-columns')).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // 2. The ruler AND the learner's own crosshair.
+  await page.locator('[role="gridcell"]').first().click();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // 3. The ruler, the crosshair, AND the agent spotlight, all at once. This is
+  //    the busiest the board can get, and the state most likely to fail.
+  const target = await page.evaluate(() => {
+    const cells = document.querySelectorAll('[role="gridcell"]');
+    for (let i = 0; i < cells.length; i++) {
+      if (!cells[i]!.textContent?.trim()) return { row: Math.floor(i / 9) + 1, col: (i % 9) + 1 };
+    }
+    return null;
+  });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation });
+  await expect(page.locator('[data-spotlit="true"]').first()).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // 4. An agent-initiated pause, on top of all of it.
+  await callTool(page, 'pause_timer', { explanation });
+  await expect(page.getByTestId('pause-overlay')).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  // 5. Back to playing, ruler removed -- the board must return clean.
+  await callTool(page, 'resume_timer', { explanation });
+  await callTool(page, 'hide_coordinate_ruler', { explanation });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

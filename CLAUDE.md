@@ -16,6 +16,7 @@ standard. 100% client-side: no server, no database, no network request after loa
 |---|---|
 | [001 — Core play experience](specs/001-sudoku-play-experience/) | **Complete.** 124/124 tasks, 241 unit + 90 browser tests |
 | [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 130/132 tasks, 851 unit + 204 browser tests, 11 tools |
+| [003 — Agent board controls](specs/003-agent-board-controls/) | **Complete.** 1183 unit + 262 browser tests, **16 tools** |
 
 ## Where things stand (read this first)
 
@@ -25,17 +26,15 @@ Check it rather than trusting it — this section is the thing most likely to be
 git log --oneline -3 && git rev-parse --abbrev-ref HEAD && cat .specify/feature.json
 ```
 
-As of 2026-08-30:
+As of 2026-08-31:
 
-- **Feature 002 is committed on the branch `002-webmcp-agent-tutor` (`b512da6`), and `main` is
-  still at `a5ad72f`.** 002 has *not* been merged. Decide deliberately where a new feature branches
-  from: `002-webmcp-agent-tutor` if it builds on the agent surface, `main` only if it genuinely
-  should not see 002.
-- **Two of 002's tasks are open on purpose**, both recorded at the end of
-  [002/tasks.md](specs/002-webmcp-agent-tutor/tasks.md): T126 (SC-001 unverified against a live
-  agent) and T131 (the feature is one commit, so the test-first ordering Principle V wants is not
-  visible in history).
-- The working tree was clean at that commit, and the full suite was green.
+- **Features 002 and 003 are both on the branch `002-webmcp-agent-tutor`, and `main` is still at
+  `a5ad72f`.** Neither has been merged. Decide deliberately where a new feature branches from.
+- **002's T131 is now closed by example**: 003 was committed tests-first, one commit per phase, so
+  the ordering Principle V wants is visible in history. Do the same.
+- **002's T126 remains open, and 003 made it bigger**: SC-001 is still unverified against a live
+  agent, and the untested surface has grown from 11 tools to 16.
+- The working tree was clean, the full suite green: 1183 unit, 262 browser.
 
 ## Commands
 
@@ -67,6 +66,13 @@ engine  ←  state  ←  ui          workers → engine only
               ↑
             tools                tools ↔ ui: FORBIDDEN, both directions
 ```
+
+**State holds THREE stores, not one.** `store.ts` (the game), `agentSession.ts` (annotations,
+explanations, spotlight, confirmation — never persisted), and `preferences.ts` (the coordinate
+ruler — persisted under its **own** storage key, `agentic-sudoku/preferences`). The third exists
+because the ruler is neither game data nor an agent mark, and because a separate key left the
+session's `SCHEMA_VERSION` at 1 — no saved game was invalidated. See
+[003/research.md R2](specs/003-agent-board-controls/research.md).
 
 - `src/engine/` — pure, deterministic. **No DOM, React, storage, or timers.** Runs in bare Node.
 - `src/state/` — single source of truth. **Imports no React.** Every mutation goes through a named action in `actions.ts`; there is no other write path.
@@ -109,6 +115,23 @@ These are easy to violate by accident and each has tests guarding it.
   nine implementations being careful.
 - **Nothing in `src/tools/` may import `@/engine/solver`** — it exports `solve()`, which returns a
   completed grid. Ask `@/engine/uniqueness` instead; it answers with a boolean.
+- **A tool that needs a generated puzzle must SIGNAL, not call.** `requestPuzzle()` lives in
+  `src/ui/puzzleLoader.ts` because `Worker` is a browser API, and `src/tools → src/ui` is a lint
+  error. `switch_difficulty` raises a request on the agent session store; `GameScreen` is subscribed
+  and does the generation. Same seam `requestDisconnect` already uses, arrow reversed
+  ([003/R1](specs/003-agent-board-controls/research.md)). `tests/unit/tools.layering.test.ts`
+  asserts it, so lint is not the only guard.
+- **The agent's marks are FORM, the learner's are WASH.** Outlines, dashes, hatching, rays for the
+  agent; flat washes for the learner. That is what survives greyscale, and it is why the spotlight
+  is a dashed edge rule rather than a tint. Never put a new mark *underneath* a digit — see the
+  hatch incident below.
+- **The coordinate ruler is the one exemption from 002/FR-033** (annotations self-expire). It is a
+  learner view preference, not a teaching annotation, and a guide that vanished mid-conversation
+  would defeat its purpose.
+- **`resume_timer` is the one exemption from 002/FR-045** (no agent writes while paused). It needs
+  no code: `resumeSession` already requires `status === 'paused'` and the write wrapper does not
+  gate on status. Do not add a blanket paused-board guard to `defineWriteTool` — a contract test
+  will catch it, but the reason is that `pause_timer` would become a one-way door for the agent.
 
 ## The WebMCP API — do not recall it, look it up
 
@@ -202,6 +225,6 @@ it is what caught the hatch.
   FR-054 handles it by design, but **the spec's own worked example is an X-Wing drill**, so this
   wants a scope decision — accept three, or add a harder technique module so X-Wing-exact puzzles
   become findable.
-- **SC-001 has not been verified against a live agent.** Nothing in this environment implements
+- **SC-001 has not been verified against a live agent, and feature 003 grew the untested surface from eleven tools to sixteen.** Nothing in this environment implements
   `document.modelContext`, so the surface has only ever been driven through a spec-conformant fake.
   Point a real agent at it before believing the "no site-specific instructions" claim.

@@ -41,7 +41,47 @@ import { TOOL_SURFACE_VERSION, type ToolDescriptor } from './types';
 
 export { TOOL_SURFACE_VERSION } from './types';
 
-/** The public contract. Order is the order an agent sees. */
+/**
+ * The public contract. Order is the order an agent sees.
+ *
+ * SIXTEEN TOOLS at surface version 1.1.0. Feature 002 registered eleven; feature
+ * 003 added five, and removed or renamed none -- 002/FR-010 makes any of those a
+ * MAJOR break, so this array is append-only in practice.
+ *
+ * Feature 003's additions, with an example invocation each:
+ *
+ *   show_coordinate_ruler   {} + explanation
+ *     Numbers the grid: columns 1-9 across the top, rows 1-9 down the left.
+ *     Persists until removed and does NOT expire -- the one exemption from
+ *     002/FR-033, because a coordinate guide that vanished mid-conversation
+ *     would defeat its purpose. The learner has their own toggle for it, so both
+ *     ruler tools are idempotent.
+ *       -> { outcome: 'shown', already_visible: false }
+ *
+ *   hide_coordinate_ruler   {} + explanation
+ *       -> { outcome: 'hidden', already_hidden: true }
+ *
+ *   switch_difficulty       { difficulty: 'easy' | 'medium' | 'hard' } + explanation
+ *     Confirmation-gated whenever the board has progress. A DECLINE IS ok: true
+ *     with outcome 'declined' -- the learner keeping their board is an ordinary
+ *     answer, not a fault. Exempt from the 100 ms budget by recorded deviation:
+ *     it waits on a human and on off-thread generation.
+ *       -> { outcome: 'loaded', difficulty: 'hard', clue_count: 24, ... }
+ *
+ *   pause_timer             {} + explanation
+ *     Stops the clock and covers the board, exactly as the learner's own Pause
+ *     does. The one place an agent action obscures the board; the learner's
+ *     Resume control is always present and never agent-dependent.
+ *       -> { outcome: 'paused', elapsed_ms: 733120 }
+ *
+ *   resume_timer            {} + explanation
+ *     THE ONE TOOL THAT WORKS WHILE PAUSED (003/FR-040). Every other write is
+ *     refused until the board is running again. No code implements the
+ *     exemption -- `resumeSession` requires status 'paused' and the write
+ *     wrapper does not gate on status -- so do not add a blanket paused-board
+ *     guard to `defineWriteTool`, or pause becomes a one-way door.
+ *       -> { outcome: 'resumed', elapsed_ms: 733120 }
+ */
 export const descriptors: readonly ToolDescriptor[] = [
   getBoardState,
   checkForConflicts,
