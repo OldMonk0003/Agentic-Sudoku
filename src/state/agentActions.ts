@@ -1,3 +1,4 @@
+import type { Coord } from '@/engine/grid';
 import type { AnnotationInput } from './annotations';
 
 /**
@@ -16,6 +17,7 @@ export type AgentAction =
   | { type: 'learnerActed' }
   | { type: 'addAnnotations'; annotations: readonly AnnotationInput[]; now: number; ttlMs?: number }
   | { type: 'clearAnnotations' }
+  | { type: 'raiseSpotlight'; cells: readonly Coord[]; now: number }
   | { type: 'pushExplanation'; text: string; tool: string; now: number; ttlMs?: number }
   | { type: 'dismissExplanation'; id: string }
   | { type: 'showToast'; text: string; now: number; ttlMs?: number }
@@ -42,6 +44,18 @@ export const addAnnotations = (payload: {
 }): AgentAction => ({ type: 'addAnnotations', ...payload });
 
 export const clearAnnotations = (): AgentAction => ({ type: 'clearAnnotations' });
+
+/**
+ * Mark where the agent just changed something (003/FR-018).
+ *
+ * A SLOT, not a list entry: FR-022's "at most one" is then structural rather
+ * than an invariant a future code path can forget. Raised by `defineWriteTool`
+ * for every cell-changing write, so no write tool has to remember (003/R4).
+ */
+export const raiseSpotlight = (payload: {
+  cells: readonly Coord[];
+  now: number;
+}): AgentAction => ({ type: 'raiseSpotlight', cells: payload.cells, now: payload.now });
 
 export const pushExplanation = (payload: {
   text: string;
@@ -84,7 +98,7 @@ export const clearConfirmation = (): AgentAction => ({ type: 'clearConfirmation'
 
 export const AGENT_ACTION_TYPES: ReadonlySet<string> = new Set<AgentAction['type']>([
   'agentConnected', 'agentDisconnected', 'agentAbsent', 'requestDisconnect', 'learnerActed',
-  'addAnnotations', 'clearAnnotations', 'pushExplanation', 'dismissExplanation',
+  'addAnnotations', 'clearAnnotations', 'raiseSpotlight', 'pushExplanation', 'dismissExplanation',
   'showToast', 'dismissToast', 'expire', 'setReducedMotion',
   'playbackStarted', 'playbackAdvanced', 'playbackEnded',
   'askConfirmation', 'answerConfirmation', 'clearConfirmation',

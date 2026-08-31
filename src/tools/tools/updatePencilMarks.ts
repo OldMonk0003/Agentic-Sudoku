@@ -92,6 +92,9 @@ export const updatePencilMarks: ToolDescriptor = defineWriteTool({
 
     return {
       ok: true,
+      // Spotlit as a region rather than a crosshair when more than one cell
+      // changed, and not at all above the threshold (003/FR-026, R3).
+      changed: cells.map(({ row, col }) => ({ row, col })),
       data: { cells_updated: cells.length, undo_depth: store.getState().history.length },
     };
   },

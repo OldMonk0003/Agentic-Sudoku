@@ -9,7 +9,7 @@ import { AnnotationLayer } from './AnnotationLayer';
 import { CoordinateRuler } from './CoordinateRuler';
 import { store, useSession } from './useStore';
 import { agentStore, useAgentSession } from './useAgentStore';
-import { annotatedRoles, learnerActed } from '@/state/agentSession';
+import { annotatedRoles, learnerActed, spotlitIndices, spotlightEdgesFor, spotlightFocusIndex, visibleSpotlight } from '@/state/agentSession';
 import { useRulerVisible } from './usePreferences';
 import type { Direction } from '@/state/actions';
 
@@ -37,7 +37,13 @@ export function Board() {
   // Computed per render, never stored -- FR-028 holds by construction.
   const conflicts = conflictSet(session);
   const tiers = boardTiers(session, conflicts);
-  const annotations = annotatedRoles(agentSession, Date.now());
+  const now = Date.now();
+  const annotations = annotatedRoles(agentSession, now);
+  // At most 21 cells, recomputed per render rather than stored -- the same
+  // choice selectors.ts makes for the learner's own crosshair, and for the same
+  // reason: it cannot drift out of step with the board (003/FR-018).
+  const spotlit = spotlitIndices(agentSession.spotlight, now);
+  const spotlightFocus = spotlightFocusIndex(agentSession.spotlight, now);
   const rulerVisible = useRulerVisible();
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -117,6 +123,21 @@ export function Board() {
       .filter(([, value]) => value === role)
       .map(([index]) => `row ${Math.floor(index / 9) + 1} column ${(index % 9) + 1}`)
       .join(', ');
+
+  /*
+    003/FR-025: the spotlight is announced through the EXISTING polite live
+    region, never a new one, and never takes focus. The cell's own label carries
+    the same fact in place, for a learner arrowing the board.
+  */
+  const spotlightMessage = (() => {
+    const live = visibleSpotlight(agentSession, now);
+    if (!live) return '';
+    if (live.focus) {
+      return `Agent changed row ${live.focus.row}, column ${live.focus.col}; highlighting its row, column, and box.`;
+    }
+    const where = live.cells.map((c) => `row ${c.row} column ${c.col}`).join(', ');
+    return `Agent changed ${live.cells.length} cells: ${where}.`;
+  })();
 
   const annotationMessage = (() => {
     if (annotations.size === 0) return '';
@@ -199,6 +220,9 @@ export function Board() {
               cell={session.cells[index]!}
               tier={tiers[index]!}
               annotation={annotations.get(index) ?? null}
+              spotlit={spotlit.has(index)}
+              spotlightEdges={spotlit.has(index) ? spotlightEdgesFor(index, spotlit) : null}
+              spotlightFocus={spotlightFocus === index}
               conflict={conflicts.has(index)}
               selected={session.selection !== null && toIndex(session.selection) === index}
               tabbable={index === tabbableIndex}
@@ -220,7 +244,7 @@ export function Board() {
       own label carries the same fact in place, for a learner arrowing the board.
     */}
     <p data-testid="annotation-announcement" role="status" aria-live="polite" className="sr-only">
-      {annotationMessage}
+      {[annotationMessage, spotlightMessage].filter(Boolean).join(' ')}
     </p>
     </>
   );

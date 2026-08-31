@@ -4,6 +4,7 @@ import {
 } from './annotations';
 import { onScreen, toastOrNull, type Explanation, type Toast } from './explanations';
 import { pending, type Confirmation } from './confirmation';
+import { liveSpotlight, type Spotlight } from './spotlight';
 import { AGENT_ACTION_TYPES, type AgentAction } from './agentActions';
 import { reduceAgent } from './agentReduce';
 
@@ -55,6 +56,8 @@ export type { Explanation, Toast } from './explanations';
 export type { Confirmation } from './confirmation';
 export { CONFIRMATION_TTL_MS } from './confirmation';
 export { ANNOTATION_TTL_MS } from './annotations';
+export { SPOTLIGHT_TTL_MS, SPOTLIGHT_MAX_CELLS, spotlitIndices, spotlightFocusIndex, spotlightEdgesFor } from './spotlight';
+export type { Spotlight, SpotlightEdges } from './spotlight';
 export { EXPLANATION_TTL_MS, TOAST_TTL_MS, MAX_VISIBLE_EXPLANATIONS } from './explanations';
 
 export interface AgentSession {
@@ -70,6 +73,12 @@ export interface AgentSession {
   readonly reducedMotion: boolean;
   readonly playback: PlaybackState | null;
   readonly confirmation: Confirmation | null;
+  /**
+   * Where the agent last changed something (003/FR-018). A SLOT, so FR-022's
+   * "at most one spotlight" is structural -- a later write overwrites it, and
+   * there is no code path that could accumulate two.
+   */
+  readonly spotlight: Spotlight | null;
   /** Monotonic id source. No randomness: the constitution routes all of it through the Engine PRNG. */
   readonly nextId: number;
 }
@@ -99,6 +108,7 @@ export function emptyAgentSession(): AgentSession {
     reducedMotion: false,
     playback: null,
     confirmation: null,
+    spotlight: null,
     nextId: 1,
   };
 }
@@ -125,6 +135,10 @@ export const visibleBeams = (session: AgentSession, now: number): readonly BeamA
 /** The prompt on screen: unanswered, and not yet timed out. */
 export const visibleConfirmation = (session: AgentSession, now: number): Confirmation | null =>
   pending(session.confirmation, now);
+
+/** The spotlight still on screen: raised, and not yet expired (003/FR-023). */
+export const visibleSpotlight = (session: AgentSession, now: number): Spotlight | null =>
+  liveSpotlight(session.spotlight, now);
 
 // --- the reducer -----------------------------------------------------------
 

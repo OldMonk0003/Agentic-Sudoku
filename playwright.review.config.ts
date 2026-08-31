@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * The config for the REVIEW harnesses, which are review aids rather than checks.
  *
  * WHY THIS FILE EXISTS. `playwright.config.ts` carries
- * `testIgnore: /tests\/review\/.*​/` so the harnesses never run in CI -- they
+ * a testIgnore pattern for tests/review so the harnesses never run in CI -- they
  * pause waiting for a human, or write screenshots nobody asserts on. But
  * `testIgnore` applies even when a file is named explicitly on the command
  * line, so `npm run review:agent` was matching zero tests and silently doing

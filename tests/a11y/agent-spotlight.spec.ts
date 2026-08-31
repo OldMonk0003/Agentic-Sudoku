@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { installFakeHost } from '../support/browserFakeHost';
+import { openWithAgent, callTool } from '../support/agentPage';
 
 /**
  * FR-020, FR-021, FR-025, FR-027.
@@ -18,17 +18,6 @@ import { installFakeHost } from '../support/browserFakeHost';
 
 const EXPLANATION = 'Only a nine fits here, because the other eight digits already appear in this box.';
 
-async function call(page: Page, name: string, args: Record<string, unknown> = {}) {
-  return page.evaluate(
-    ([n, a]) =>
-      (window as unknown as { call: (n: string, a: object) => Promise<unknown> }).call(
-        n as string,
-        a as object,
-      ),
-    [name, args] as const,
-  );
-}
-
 async function fillSomewhere(page: Page) {
   const target = await page.evaluate(() => {
     const cells = document.querySelectorAll('[role="gridcell"]');
@@ -37,14 +26,14 @@ async function fillSomewhere(page: Page) {
     }
     return null;
   });
-  await call(page, 'fill_cell', { ...target, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', {
+    row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION,
+  });
   return target!;
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(installFakeHost);
-  await page.goto('/');
-  await page.waitForSelector('[role="gridcell"]');
+  await openWithAgent(page);
 });
 
 test('axe is clean with a spotlight on screen', async ({ page }) => {
@@ -68,20 +57,25 @@ test('the two markings are separated by form, not only colour (FR-021)', async (
   // Strip every colour from the page. What remains must still distinguish them.
   await page.addStyleTag({ content: 'html { filter: grayscale(1) !important; }' });
 
-  const spotlit = page.locator('[data-spotlit="true"]').first();
-  const outline = await spotlit.evaluate((el) => {
+  const edge = page.locator('[data-spotlit="true"] [data-spotlight-edge]').first();
+  const border = await edge.evaluate((el) => {
     const style = getComputedStyle(el);
-    return { style: style.outlineStyle, width: style.outlineWidth };
+    return { style: style.borderTopStyle, width: style.borderTopWidth };
   });
 
   // A dashed rule is a FORM cue: it reads as a dash with no colour at all.
-  expect(outline.style).toBe('dashed');
-  expect(parseFloat(outline.width)).toBeGreaterThan(0);
+  expect(border.style).toBe('dashed');
+  expect(parseFloat(border.width)).toBeGreaterThan(0);
 
-  // The learner's own selection is still a ring, which is a different form.
+  // The learner's own selection is a SOLID outline ring -- a different form on a
+  // different CSS property, so the two never erase one another.
   const learner = page.locator('[data-index="65"]');
-  const ring = await learner.evaluate((el) => getComputedStyle(el).boxShadow);
-  expect(ring).not.toBe('none');
+  const ring = await learner.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { style: style.outlineStyle, width: style.outlineWidth };
+  });
+  expect(ring.style).toBe('solid');
+  expect(parseFloat(ring.width)).toBeGreaterThan(0);
 });
 
 test('the spotlight is announced politely and takes no focus (FR-025)', async ({ page }) => {
@@ -105,8 +99,7 @@ test('a spotlit cell says so in its own label, in place (FR-025)', async ({ page
 
 test('reduced motion suppresses any spotlight transition (FR-027)', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.reload();
-  await page.waitForSelector('[role="gridcell"]');
+  await openWithAgent(page);
   await fillSomewhere(page);
 
   const animated = await page.locator('[data-spotlit="true"]').first().evaluate((el) => {

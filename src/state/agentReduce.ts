@@ -1,6 +1,7 @@
 import { ANNOTATION_TTL_MS, materialise, unexpired } from './annotations';
 import { EXPLANATION_TTL_MS, TOAST_TTL_MS, toastOrNull, unexpiredExplanations } from './explanations';
 import { CONFIRMATION_TTL_MS } from './confirmation';
+import { liveSpotlight, makeSpotlight } from './spotlight';
 import type { AgentAction } from './agentActions';
 import type { AgentSession } from './agentSession';
 
@@ -44,8 +45,21 @@ export function reduceAgent(session: AgentSession, action: AgentAction): AgentSe
     case 'clearAnnotations': {
       // Deliberately does NOT clear the explanation queue: clear_visual_annotations
       // would otherwise erase its own narration the instant it made it.
-      if (session.annotations.length === 0 && session.toast === null) return null;
-      return { ...session, annotations: [], toast: null };
+      // The spotlight IS cleared -- it is one of the agent's marks (003/FR-023).
+      if (session.annotations.length === 0 && session.toast === null && session.spotlight === null) {
+        return null;
+      }
+      return { ...session, annotations: [], toast: null, spotlight: null };
+    }
+
+    case 'raiseSpotlight': {
+      // `makeSpotlight` returns null above the cell threshold, and assigning
+      // that null is DELIBERATE: leaving the previous spotlight up would point
+      // at a cell that is no longer the most recent change, which is worse than
+      // showing nothing (003/R3).
+      const spotlight = makeSpotlight(action.cells, action.now);
+      if (spotlight === null && session.spotlight === null) return null;
+      return { ...session, spotlight };
     }
 
     case 'pushExplanation':
@@ -90,18 +104,20 @@ export function reduceAgent(session: AgentSession, action: AgentAction): AgentSe
       const annotations = unexpired(session.annotations, action.now);
       const explanations = unexpiredExplanations(session.explanations, action.now);
       const toast = toastOrNull(session.toast, action.now);
+      const spotlight = liveSpotlight(session.spotlight, action.now);
 
       // Reporting "no change" is what stops the View's expiry interval from
       // notifying subscribers twice a second for nothing.
       if (
         annotations.length === session.annotations.length &&
         explanations.length === session.explanations.length &&
-        toast === session.toast
+        toast === session.toast &&
+        spotlight === session.spotlight
       ) {
         return null;
       }
 
-      return { ...session, annotations, explanations, toast };
+      return { ...session, annotations, explanations, toast, spotlight };
     }
 
     case 'setReducedMotion':

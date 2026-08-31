@@ -40,7 +40,9 @@ for (const viewport of VIEWPORTS) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.addInitScript(installFakeHost);
     await page.goto('/');
-    await page.waitForSelector('[role="gridcell"]');
+    // Wait for generation to finish, or every write is correctly rejected.
+    await page.locator('[role="grid"][aria-busy="false"]').waitFor();
+    await page.locator('[role="gridcell"][data-origin="clue"]').first().waitFor();
 
     const call = (name: string, args: Record<string, unknown> = {}) =>
       page.evaluate(
@@ -95,7 +97,7 @@ for (const viewport of VIEWPORTS) {
       await page.addStyleTag({ content: GREYSCALE });
       await shot('05-spotlight-greyscale');
       await page.reload();
-      await page.waitForSelector('[role="gridcell"]');
+      await page.locator('[role="grid"][aria-busy="false"]').waitFor();
     }
 
     // 5. Ruler removed -- must return to the baseline exactly.

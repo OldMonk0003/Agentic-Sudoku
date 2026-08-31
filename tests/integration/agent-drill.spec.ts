@@ -26,12 +26,32 @@ test.beforeEach(async ({ page }) => {
   await openWithAgent(page);
 });
 
-test('the surface is complete at eleven tools', async ({ page }) => {
+/*
+  Feature 002 asserted a surface of exactly eleven here. Feature 003 adds five
+  more, so the count moved -- but the ASSERTION THAT MATTERS is unchanged and
+  sharpened: 002's eleven must all still be registered, because 002/FR-010 makes
+  removing or renaming one a MAJOR break. The number is checked in the browser as
+  well as headlessly, so a tool that registers in Node but not in the page is
+  caught here rather than by an agent.
+*/
+test("002's eleven tools are all still registered in the browser", async ({ page }) => {
   const names = await page.evaluate(async () =>
     (await document.modelContext!.getTools()).map((t) => t.name),
   );
-  expect(names).toHaveLength(11);
-  expect(names).toContain('load_technique_practice');
+
+  for (const name of [
+    'get_board_state', 'check_for_conflicts',
+    'highlight_pattern_cells', 'show_pattern_hint_toast', 'clear_visual_annotations',
+    'fill_cell', 'draw_constraint_beams',
+    'update_pencil_marks', 'auto_fill_all_pencil_marks',
+    'playback_deduction_sequence', 'load_technique_practice',
+  ]) {
+    expect(names, `${name} must still be registered`).toContain(name);
+  }
+
+  // Grows with each slice of 003; complete at sixteen.
+  expect(names).toHaveLength(13);
+  expect(new Set(names).size).toBe(names.length);
 });
 
 test('the learner is asked first, in the agent"s own words', async ({ page }) => {

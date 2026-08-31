@@ -129,29 +129,29 @@ that the learner's next digit lands in the cell **they** had selected.
 
 ### Tests for User Story 2 (write first, watch fail)
 
-- [ ] T033 [P] [US2] Write `tests/unit/spotlight.test.ts` in the **node** project: the focus form yields 21 indices for a single cell; the region form yields exactly the changed cells for 2–9; **no spotlight at all above `SPOTLIGHT_MAX_CELLS = 9`**; expiry is a pure selector over `expiresAt` with an injected `now` ([data-model.md § 2](./data-model.md))
-- [ ] T034 [P] [US2] Write `tests/unit/agentSession.spotlight.test.ts` asserting the single slot: a second agent write **replaces** rather than accumulating (FR-022), and `clearAnnotations` removes it with everything else (FR-023)
-- [ ] T035 [P] [US2] Write `tests/unit/narration.spotlight.test.ts` asserting `WriteOutcome.changed` raises the spotlight, and that a **rejected** write raises none — the `validate → mutate → publish` ordering, so a spotlight never points at a cell that did not change
-- [ ] T036 [P] [US2] Write `tests/unit/selection.untouched.test.ts` asserting `session.selection` is byte-identical before and after **every** write tool in `descriptors` (FR-019, SC-004)
-- [ ] T037 [P] [US2] Write `tests/integration/agent-spotlight.spec.ts` — the SC-004 keypress test: the learner selects row 8 column 2, the agent fills row 1 column 3, the learner presses `5`, and it lands in **row 8 column 2**. Also assert `document.activeElement` did not move
-- [ ] T038 [P] [US2] Write `tests/unit/spotlight.no-persist.test.ts` asserting the spotlight appears in neither `localStorage` nor `GameSession.history` (FR-024)
-- [ ] T039 [P] [US2] Write `tests/component/Cell.spotlight.test.tsx` asserting the edge rule renders, the focus cell carries the corner glyph, and the learner's ring takes precedence when both mark the same cell
-- [ ] T040 [P] [US2] Extend `tests/integration/agent-playback.spec.ts` to assert the spotlight follows each walkthrough step as it executes
-- [ ] T041 [P] [US2] Write `tests/a11y/agent-spotlight.spec.ts`: distinguishable from the learner's crosshair in greyscale and under CVD simulation, axe clean with both on screen, and announced through the **existing** polite live region without taking focus (FR-020, FR-021, FR-025)
-- [ ] T042 [P] [US2] Extend `tests/a11y/reduced-motion.spec.ts` to assert no spotlight transition under `prefers-reduced-motion` (FR-027)
+- [X] T033 [P] [US2] Write `tests/unit/spotlight.test.ts` in the **node** project: the focus form yields 21 indices for a single cell; the region form yields exactly the changed cells for 2–9; **no spotlight at all above `SPOTLIGHT_MAX_CELLS = 9`**; expiry is a pure selector over `expiresAt` with an injected `now` ([data-model.md § 2](./data-model.md))
+- [X] T034 [P] [US2] Write `tests/unit/agentSession.spotlight.test.ts` asserting the single slot: a second agent write **replaces** rather than accumulating (FR-022), and `clearAnnotations` removes it with everything else (FR-023)
+- [X] T035 [P] [US2] Write `tests/unit/narration.spotlight.test.ts` asserting `WriteOutcome.changed` raises the spotlight, and that a **rejected** write raises none — the `validate → mutate → publish` ordering, so a spotlight never points at a cell that did not change
+- [X] T036 [P] [US2] Write `tests/unit/selection.untouched.test.ts` asserting `session.selection` is byte-identical before and after **every** write tool in `descriptors` (FR-019, SC-004)
+- [X] T037 [P] [US2] Write `tests/integration/agent-spotlight.spec.ts` — the SC-004 keypress test: the learner selects row 8 column 2, the agent fills row 1 column 3, the learner presses `5`, and it lands in **row 8 column 2**. Also assert `document.activeElement` did not move
+- [X] T038 [P] [US2] Write `tests/unit/spotlight.no-persist.test.ts` asserting the spotlight appears in neither `localStorage` nor `GameSession.history` (FR-024)
+- [X] T039 [P] [US2] Write `tests/component/Cell.spotlight.test.tsx` asserting the edge rule renders, the focus cell carries the corner glyph, and the learner's ring takes precedence when both mark the same cell
+- [X] T040 [P] [US2] Extend `tests/integration/agent-playback.spec.ts` to assert the spotlight follows each walkthrough step as it executes
+- [X] T041 [P] [US2] Write `tests/a11y/agent-spotlight.spec.ts`: distinguishable from the learner's crosshair in greyscale and under CVD simulation, axe clean with both on screen, and announced through the **existing** polite live region without taking focus (FR-020, FR-021, FR-025)
+- [X] T042 [P] [US2] Extend `tests/a11y/reduced-motion.spec.ts` to assert no spotlight transition under `prefers-reduced-motion` (FR-027)
 
 ### Implementation for User Story 2
 
-- [ ] T043 [US2] Create `src/state/spotlight.ts` — `Spotlight`, `SPOTLIGHT_TTL_MS`, `SPOTLIGHT_MAX_CELLS`, `spotlitIndices`, `spotlightFocusIndex`
-- [ ] T044 [US2] Add the `spotlight` **slot** and its actions to `src/state/agentActions.ts`, `src/state/agentReduce.ts`, and `src/state/agentSession.ts`, including it in the existing `expire` tick and in `clearAnnotations`
-- [ ] T045 [US2] Add `changed?: readonly Coord[]` to `WriteOutcome` in `src/tools/narration.ts` and raise the spotlight in the same `validate → mutate → publish` step that queues the explanation — so a write tool cannot forget ([research.md § R4](./research.md))
-- [ ] T046 [P] [US2] Return `changed` from `src/tools/tools/fillCell.ts`
-- [ ] T047 [P] [US2] Return `changed` from `src/tools/tools/updatePencilMarks.ts`
-- [ ] T048 [P] [US2] Return `changed` from `src/tools/tools/autoFillAllPencilMarks.ts` — above the threshold the wrapper raises nothing, which is the intended behaviour, not an omission
-- [ ] T049 [US2] Render the spotlight in `src/ui/Cell.tsx` as a **dashed edge rule in `--color-mark-agent`, never a wash**, with the corner glyph on the focus cell. **Nothing new goes underneath a digit** — that is the 002 hatch lesson ([research.md § R5](./research.md))
-- [ ] T050 [US2] Derive the spotlit set in `src/ui/Board.tsx`, pass it to `Cell`, and extend the existing polite announcement to name the spotlit location
-- [ ] T051 [US2] Add a spotlight class to `app/globals.css` **only if** the dashed rule needs a token that does not exist. If a token is added, `tests/unit/palette.contrast.test.ts` re-runs — that file parses the theme block, so a new token is a test event
-- [ ] T052 [US2] **Look at the board.** Screenshot the learner's crosshair and the agent's spotlight on screen together, in colour and in greyscale, and **read the images back**. This is the exact class of defect that has shipped three times in this project
+- [X] T043 [US2] Create `src/state/spotlight.ts` — `Spotlight`, `SPOTLIGHT_TTL_MS`, `SPOTLIGHT_MAX_CELLS`, `spotlitIndices`, `spotlightFocusIndex`
+- [X] T044 [US2] Add the `spotlight` **slot** and its actions to `src/state/agentActions.ts`, `src/state/agentReduce.ts`, and `src/state/agentSession.ts`, including it in the existing `expire` tick and in `clearAnnotations`
+- [X] T045 [US2] Add `changed?: readonly Coord[]` to `WriteOutcome` in `src/tools/narration.ts` and raise the spotlight in the same `validate → mutate → publish` step that queues the explanation — so a write tool cannot forget ([research.md § R4](./research.md))
+- [X] T046 [P] [US2] Return `changed` from `src/tools/tools/fillCell.ts`
+- [X] T047 [P] [US2] Return `changed` from `src/tools/tools/updatePencilMarks.ts`
+- [X] T048 [P] [US2] Return `changed` from `src/tools/tools/autoFillAllPencilMarks.ts` — above the threshold the wrapper raises nothing, which is the intended behaviour, not an omission
+- [X] T049 [US2] Render the spotlight in `src/ui/Cell.tsx` as a **dashed edge rule in `--color-mark-agent`, never a wash**, with the corner glyph on the focus cell. **Nothing new goes underneath a digit** — that is the 002 hatch lesson ([research.md § R5](./research.md))
+- [X] T050 [US2] Derive the spotlit set in `src/ui/Board.tsx`, pass it to `Cell`, and extend the existing polite announcement to name the spotlit location
+- [X] T051 [US2] Add a spotlight class to `app/globals.css` **only if** the dashed rule needs a token that does not exist. If a token is added, `tests/unit/palette.contrast.test.ts` re-runs — that file parses the theme block, so a new token is a test event
+- [X] T052 [US2] **Look at the board.** Screenshot the learner's crosshair and the agent's spotlight on screen together, in colour and in greyscale, and **read the images back**. This is the exact class of defect that has shipped three times in this project
 
 **Checkpoint**: US2 complete and deployable. The board shows where the agent acted, and the learner's
 hand is never moved.

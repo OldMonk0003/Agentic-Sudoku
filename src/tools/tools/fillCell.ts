@@ -96,6 +96,9 @@ export const fillCell: ToolDescriptor = defineWriteTool({
 
     return {
       ok: true,
+      // The wrapper spotlights this cell, so the learner can see where the
+      // change landed without hunting for it (003/FR-018).
+      changed: [{ row, col }],
       data: {
         row,
         col,

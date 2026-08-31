@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { installFakeHost } from '../support/browserFakeHost';
+import { openWithAgent, callTool } from '../support/agentPage';
 
 /**
  * SC-004, in the browser, with a real keyboard.
@@ -18,17 +18,6 @@ import { installFakeHost } from '../support/browserFakeHost';
 
 const EXPLANATION = 'Only a nine fits here, because the other eight digits already appear in this box.';
 
-async function call(page: Page, name: string, args: Record<string, unknown> = {}) {
-  return page.evaluate(
-    ([n, a]) =>
-      (window as unknown as { call: (n: string, a: object) => Promise<unknown> }).call(
-        n as string,
-        a as object,
-      ),
-    [name, args] as const,
-  );
-}
-
 /** An empty, non-clue cell that is not the one the learner has selected. */
 async function anEmptyCellOtherThan(page: Page, index: number) {
   return page.evaluate((skip) => {
@@ -42,15 +31,19 @@ async function anEmptyCellOtherThan(page: Page, index: number) {
   }, index);
 }
 
+/*
+  `openWithAgent` waits for aria-busy="false" AND for the clues to render.
+  Acting before that means the board is still `generating`, and every write is
+  correctly rejected with wrong-status -- which is what made an earlier version
+  of this file flake.
+*/
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(installFakeHost);
-  await page.goto('/');
-  await page.waitForSelector('[role="gridcell"]');
+  await openWithAgent(page);
 });
 
 test('the agent fill is spotlit', async ({ page }) => {
   const target = await anEmptyCellOtherThan(page, -1);
-  await call(page, 'fill_cell', { ...target, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
 
   await expect(page.locator('[data-spotlight-focus="true"]')).toHaveCount(1);
   // The band: the cell plus its row, column, and box.
@@ -63,7 +56,7 @@ test("the learner's crosshair does not move (FR-019)", async ({ page }) => {
   await learnerCell.click();
 
   const target = await anEmptyCellOtherThan(page, 65);
-  await call(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
 
   await expect(learnerCell).toHaveAttribute('aria-selected', 'true');
 });
@@ -84,7 +77,7 @@ test("the learner's next keypress lands in THEIR cell (SC-004)", async ({ page }
   await page.locator(`[data-index="${learnerIndex}"]`).click();
 
   const target = await anEmptyCellOtherThan(page, learnerIndex);
-  await call(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
 
   await page.keyboard.press('5');
 
@@ -98,17 +91,17 @@ test('keyboard focus is not stolen either (FR-019)', async ({ page }) => {
   const before = await page.evaluate(() => document.activeElement?.getAttribute('data-index'));
 
   const target = await anEmptyCellOtherThan(page, 65);
-  await call(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
 
   expect(await page.evaluate(() => document.activeElement?.getAttribute('data-index'))).toBe(before);
 });
 
 test('a later fill replaces the spotlight rather than adding one (FR-022)', async ({ page }) => {
   const first = await anEmptyCellOtherThan(page, -1);
-  await call(page, 'fill_cell', { row: first!.row, col: first!.col, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: first!.row, col: first!.col, digit: 9, explanation: EXPLANATION });
 
   const second = await anEmptyCellOtherThan(page, first!.index);
-  await call(page, 'fill_cell', { row: second!.row, col: second!.col, digit: 8, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: second!.row, col: second!.col, digit: 8, explanation: EXPLANATION });
 
   await expect(page.locator('[data-spotlight-focus="true"]')).toHaveCount(1);
   await expect(page.locator(`[data-index="${second!.index}"][data-spotlight-focus="true"]`)).toHaveCount(1);
@@ -116,10 +109,10 @@ test('a later fill replaces the spotlight rather than adding one (FR-022)', asyn
 
 test('clear_visual_annotations removes the spotlight (FR-023)', async ({ page }) => {
   const target = await anEmptyCellOtherThan(page, -1);
-  await call(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
   await expect(page.locator('[data-spotlit="true"]').first()).toBeVisible();
 
-  await call(page, 'clear_visual_annotations', {
+  await callTool(page, 'clear_visual_annotations', {
     explanation: 'Clearing my marks so we can look at the next pattern with completely fresh eyes.',
   });
 
@@ -127,7 +120,7 @@ test('clear_visual_annotations removes the spotlight (FR-023)', async ({ page })
 });
 
 test('a whole-board pencil fill raises no spotlight at all', async ({ page }) => {
-  await call(page, 'auto_fill_all_pencil_marks', {
+  await callTool(page, 'auto_fill_all_pencil_marks', {
     acknowledges_replacing_marks: true,
     explanation: 'Pencilling every legal candidate so that the naked pairs become visible to you.',
   });
@@ -138,7 +131,7 @@ test('a whole-board pencil fill raises no spotlight at all', async ({ page }) =>
 
 test('the spotlight is announced without stealing focus (FR-025)', async ({ page }) => {
   const target = await anEmptyCellOtherThan(page, -1);
-  await call(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
+  await callTool(page, 'fill_cell', { row: target!.row, col: target!.col, digit: 9, explanation: EXPLANATION });
 
   const announcement = page.getByTestId('annotation-announcement');
   await expect(announcement).toContainText(new RegExp(`row ${target!.row}`, 'i'));

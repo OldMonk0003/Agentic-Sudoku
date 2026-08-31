@@ -54,29 +54,38 @@ describe('Cell spotlight rendering', () => {
     expect(cell.getAttribute('data-spotlight-focus')).toBe('true');
   });
 
-  it('uses an edge rule, never a wash (FR-020)', () => {
+  it('uses a dashed edge rule, never a wash (FR-020)', () => {
     render(<Cell {...base} cell={empty} spotlit />);
-    const classes = screen.getByRole('gridcell').className;
+    const edge = screen.getByRole('gridcell').querySelector('[data-spotlight-edge]');
 
-    // A form cue -- an outline -- not a background fill.
-    expect(classes).toMatch(/outline/);
-    // The learner's wash vocabulary must not be borrowed.
-    expect(classes).not.toMatch(/bg-wash-crosshair/);
+    // A FORM cue -- a dashed border at the cell edge -- not a background fill.
+    expect(edge).not.toBeNull();
+    expect(edge!.className).toMatch(/border-dashed/);
+    // The learner's flat-wash vocabulary must not be borrowed.
+    expect(edge!.className).not.toMatch(/bg-wash/);
   });
 
-  it('does not put anything underneath the digit (the 002 hatch lesson)', () => {
+  it('draws the edge as an overlay, never underneath the digit (the 002 hatch lesson)', () => {
     render(<Cell {...base} cell={clue} spotlit spotlightFocus />);
-    const classes = screen.getByRole('gridcell').className;
-    expect(classes).not.toMatch(/agent-hatch/);
+    const cell = screen.getByRole('gridcell');
+
+    expect(cell.className).not.toMatch(/agent-hatch/);
+    // The digit is still the cell's own text; the edge is a sibling overlay
+    // with no background of its own.
+    expect(cell.textContent).toContain('4');
+    const edge = cell.querySelector('[data-spotlight-edge]')!;
+    expect(edge.className).toMatch(/pointer-events-none/);
+    expect(edge.className).not.toMatch(/bg-/);
   });
 
-  it('leaves the learner ring in charge when both mark the same cell', () => {
+  it('does not borrow the selection ring property, so both can coexist', () => {
     render(<Cell {...base} cell={empty} tier="selected" selected spotlit />);
     const cell = screen.getByRole('gridcell');
 
-    // The learner's own selection is still unmistakably theirs...
-    expect(cell.className).toMatch(/ring/);
-    // ...and the agent's attribution is still discernible.
+    // The learner's own selection is still an outline ring, unmistakably theirs.
+    expect(cell.className).toMatch(/outline-ring-selected/);
+    // The agent's mark is a separate dashed overlay, so neither erases the other.
+    expect(cell.querySelector('[data-spotlight-edge]')).not.toBeNull();
     expect(cell.getAttribute('data-spotlit')).toBe('true');
   });
 

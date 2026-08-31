@@ -82,6 +82,17 @@ export const autoFillAllPencilMarks: ToolDescriptor = defineWriteTool({
 
     return {
       ok: true,
+      /*
+        No `changed` at all, and that is the design rather than an omission.
+
+        This tool writes into EVERY empty cell. `makeSpotlight` would refuse
+        anything over nine cells anyway (003/R3), but saying nothing here states
+        the intent at the call site: sixty spotlit cells convey nothing, obscure
+        the board, and are the opposite of "see where the change happened
+        without searching for it". FR-026 asks for EXTENT, and for a whole-board
+        write the honest conveyance is the explanation -- which FR-041 already
+        requires to say what it replaced.
+      */
       data: {
         cells_filled: filled,
         hand_written_marks_replaced: handWritten,

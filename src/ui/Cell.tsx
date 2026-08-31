@@ -2,7 +2,7 @@
 
 import { DIGITS, colOf, rowOf, toCoord, type CellIndex } from '@/engine/grid';
 import type { HighlightTier } from '@/state/selectors';
-import type { AnnotationRole } from '@/state/agentSession';
+import type { AnnotationRole, SpotlightEdges } from '@/state/agentSession';
 import type { Cell as CellData } from '@/state/types';
 
 /**
@@ -36,6 +36,21 @@ interface CellProps {
    * rather than only in the announcement (002/FR-060, SC-011).
    */
   readonly annotation?: AnnotationRole | null;
+  /**
+   * Part of the band marking where the agent last changed something
+   * (003/FR-018). Drawn as a DASHED EDGE RULE, never a wash: the learner's
+   * highlighting owns the flat-wash vocabulary, and a second wash would be
+   * exactly the confusion 003/FR-020 forbids.
+   */
+  readonly spotlit?: boolean;
+  /**
+   * Which sides of this cell face OUT of the band. Only those get a rule, so the
+   * band reads as ONE outlined shape rather than twenty-one boxed cells -- which
+   * is what the first screenshot showed it must not be.
+   */
+  readonly spotlightEdges?: SpotlightEdges | null;
+  /** The cell the agent actually changed, at the centre of the band. */
+  readonly spotlightFocus?: boolean;
   readonly onSelect: (index: CellIndex) => void;
 }
 
@@ -107,6 +122,7 @@ function describe(
   cell: CellData,
   conflict: boolean,
   annotation: AnnotationRole | null,
+  spotlightFocus: boolean,
 ): string {
   const where = `Row ${row}, column ${col}`;
   const notes = [...cell.candidates].sort().join(' ');
@@ -126,11 +142,15 @@ function describe(
   // place rather than only via the live region (FR-026, FR-047).
   const marked =
     annotation === 'target' ? ', agent target' : annotation === 'because' ? ', agent reason' : '';
-  return `${where}, ${what}${conflict ? ', conflict' : ''}${marked}`;
+  // 003/FR-025: a screen-reader learner hears WHERE the agent acted in place,
+  // arrowing the board, not only through the live region.
+  const spotlit = spotlightFocus ? ', agent changed this cell' : '';
+  return `${where}, ${what}${conflict ? ', conflict' : ''}${marked}${spotlit}`;
 }
 
 export function Cell({
-  index, colIndex, cell, tier, conflict, selected, tabbable, annotation = null, onSelect,
+  index, colIndex, cell, tier, conflict, selected, tabbable, annotation = null,
+  spotlit = false, spotlightEdges = null, spotlightFocus = false, onSelect,
 }: CellProps) {
   const { row, col } = toCoord(index);
   const origin = cell.value === null ? 'empty' : cell.origin;
@@ -144,7 +164,7 @@ export function Cell({
     <button
       type="button"
       role="gridcell"
-      aria-label={describe(row, col, cell, conflict, annotation)}
+      aria-label={describe(row, col, cell, conflict, annotation, spotlightFocus)}
       aria-selected={selected}
       tabIndex={tabbable ? 0 : -1}
       aria-colindex={colIndex}
@@ -153,6 +173,8 @@ export function Cell({
       data-tier={tier}
       data-conflict={conflict ? 'true' : 'false'}
       data-selected={selected ? 'true' : 'false'}
+      {...(spotlit ? { 'data-spotlit': 'true' } : {})}
+      {...(spotlightFocus ? { 'data-spotlight-focus': 'true' } : {})}
       onClick={() => onSelect(index)}
       // Focus and selection move together. A keyboard user who tabs into the
       // board must land on a SELECTED cell, or their next keystroke goes
@@ -173,6 +195,32 @@ export function Cell({
         .filter(Boolean)
         .join(' ')}
     >
+      {/*
+        The dashed edge rule. An overlay rather than a background, because
+        NOTHING NEW GOES UNDERNEATH A DIGIT -- 002's third visual defect was the
+        `because` hatch running its stripes straight through a clue's 4, and the
+        fix was moving it to the cell edge. Not to be re-opened (003/R5).
+      */}
+      {spotlit && (
+        <span
+          aria-hidden="true"
+          data-spotlight-edge="true"
+          className={[
+            'pointer-events-none absolute inset-0 border-dashed border-mark-agent',
+            // The focus cell is fully outlined, so it is findable INSIDE the
+            // band; every other cell contributes only its outward-facing sides.
+            spotlightFocus
+              ? 'border-2'
+              : [
+                  spotlightEdges?.top ? 'border-t' : '',
+                  spotlightEdges?.right ? 'border-r' : '',
+                  spotlightEdges?.bottom ? 'border-b' : '',
+                  spotlightEdges?.left ? 'border-l' : '',
+                ].filter(Boolean).join(' '),
+          ].filter(Boolean).join(' ')}
+        />
+      )}
+
       {cell.value ?? ''}
 
       {/*

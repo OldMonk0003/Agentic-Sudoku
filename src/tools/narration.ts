@@ -1,4 +1,5 @@
-import { agentStore, pushExplanation } from '@/state/agentSession';
+import { agentStore, pushExplanation, raiseSpotlight } from '@/state/agentSession';
+import type { Coord } from '@/engine/grid';
 import { validate } from './validate';
 import { failure, success, type ErrorCode, type JsonSchema, type ToolDescriptor, type ToolExecuteOptions, type ToolResult } from './types';
 
@@ -35,7 +36,20 @@ const EXPLANATION_SCHEMA: JsonSchema = {
 
 /** What a write handler reports. Never a thrown error -- see registry.ts. */
 export type WriteOutcome =
-  | { readonly ok: true; readonly data: unknown }
+  | {
+      readonly ok: true;
+      readonly data: unknown;
+      /**
+       * The cells this write actually changed, if any.
+       *
+       * The wrapper raises the SPOTLIGHT from this (003/FR-018, R4), for the
+       * same reason it injects the explanation: with nine write tools written
+       * independently, "every cell change is visible" holds only if nine
+       * implementations are each correct and stay correct forever. Optional,
+       * because several write tools change no cells at all.
+       */
+      readonly changed?: readonly Coord[];
+    }
   | {
       readonly ok: false;
       readonly code: ErrorCode;
@@ -131,10 +145,22 @@ export function defineWriteTool(spec: WriteToolSpec): ToolDescriptor {
       return failure(spec.name, outcome.code, outcome.message, outcome.details);
     }
 
+    /*
+      PUBLISH. The mutation succeeded, so the learner is now told what happened
+      and shown where -- in that order, and only now.
+
+      An explanation for a rejected change would be a lie, and a spotlight on a
+      rejected change would point at a cell that did not move. Both are why the
+      ordering is validate -> mutate -> publish and not anything else.
+    */
     if ((spec.narration ?? 'popup') === 'popup') {
       agentStore.dispatch(
         pushExplanation({ text: input_.explanation, tool: spec.name, now: Date.now() }),
       );
+    }
+
+    if (outcome.changed && outcome.changed.length > 0) {
+      agentStore.dispatch(raiseSpotlight({ cells: outcome.changed, now: Date.now() }));
     }
 
     return success(spec.name, outcome.data);
