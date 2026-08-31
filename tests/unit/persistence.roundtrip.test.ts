@@ -125,3 +125,46 @@ describe('persistence round-trip', () => {
     expect(restoreSession(memoryStorage())).toBeNull();
   });
 });
+
+/**
+ * Feature 003 deliberately did NOT touch the session schema.
+ *
+ * The coordinate ruler is a view preference, so it went into its own store under
+ * its own storage key (research.md R2). The alternative -- adding `rulerVisible`
+ * to PersistedSession and bumping SCHEMA_VERSION to 2 -- was rejected because
+ * `restoreSession` discards any payload whose version it does not recognise.
+ * That would have thrown away every in-progress board in the world to gain one
+ * boolean that is not session data.
+ *
+ * These two tests are what make that promise checkable rather than merely
+ * stated.
+ */
+describe('feature 003 left the session schema alone', () => {
+  it('a session payload written before feature 003 still restores', () => {
+    // Byte-for-byte the v1 shape, as an older build would have written it.
+    const store = createStore(emptySession());
+    store.dispatch(newPuzzle('easy', 987654));
+    const storage = memoryStorage();
+    serialiseSession(store.getState(), storage);
+
+    const raw = JSON.parse(storage.getItem('agentic-sudoku/session')!);
+    expect(raw.schemaVersion).toBe(1);
+
+    const restored = restoreSession(storage);
+    expect(restored).not.toBeNull();
+    expect(restored!.puzzle!.puzzleString).toBe(store.getState().puzzle!.puzzleString);
+  });
+
+  it('writes no ruler field into the session payload', () => {
+    const store = createStore(emptySession());
+    store.dispatch(newPuzzle('easy', 5150));
+    const storage = memoryStorage();
+    serialiseSession(store.getState(), storage);
+
+    const raw = storage.getItem('agentic-sudoku/session')!;
+    expect(raw).not.toMatch(/ruler/i);
+    expect(Object.keys(JSON.parse(raw)).sort()).toEqual([
+      'candidates', 'difficulty', 'elapsedMs', 'origins', 'puzzleString', 'schemaVersion', 'status', 'values',
+    ]);
+  });
+});

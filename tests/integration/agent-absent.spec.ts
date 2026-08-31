@@ -88,3 +88,41 @@ test('the accessibility tree contains no agent affordance', async ({ page }) => 
   expect(flattened).not.toContain('annotation');
   expect(flattened).not.toContain('explanation');
 });
+
+/**
+ * Feature 003 amends this file for the first time, and deliberately.
+ *
+ * The coordinate ruler is the ONE thing 003 adds that a host-less page still
+ * gets, because it is an ordinary readability aid rather than an agent
+ * affordance (FR-013). So the parity rule sharpens rather than loosens: the
+ * ruler toggle must be present AND WORKING, and everything else must still be
+ * absent.
+ *
+ * If the toggle ever disappears when no agent is connected, the ruler has
+ * quietly become an agent feature and FR-013 is broken.
+ */
+
+test('the learner gets the ruler toggle even with no agent (FR-013)', async ({ page }) => {
+  const toggle = page.getByRole('switch', { name: /row and column|coordinate|guides|numbers/i });
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toBeEnabled();
+});
+
+test('the ruler works with no agent present', async ({ page }) => {
+  await expect(page.getByTestId('ruler-columns')).toHaveCount(0);
+
+  await page.getByRole('switch', { name: /row and column|coordinate|guides|numbers/i }).click();
+
+  await expect(page.getByTestId('ruler-columns')).toBeVisible();
+  await expect(page.getByTestId('ruler-rows')).toBeVisible();
+});
+
+test('the ruler preference persists with no agent present', async ({ page }) => {
+  await page.getByRole('switch', { name: /row and column|coordinate|guides|numbers/i }).click();
+  await page.reload();
+  await page.waitForSelector('[role="gridcell"]');
+
+  await expect(page.getByTestId('ruler-columns')).toBeVisible();
+  // Still no agent, still nothing agent-related.
+  await expect(page.getByTestId('agent-badge')).toHaveCount(0);
+});

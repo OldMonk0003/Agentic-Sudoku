@@ -16,7 +16,20 @@ import { installFakeHost } from '../support/browserFakeHost';
  * could not carry. Every other tool gates here.
  */
 
-const EXEMPT = new Set(['playback_deduction_sequence', 'load_technique_practice']);
+/*
+  Feature 003 adds a THIRD exemption, for the same reason as the other two rather
+  than a new one: `switch_difficulty` waits both on a learner answering a
+  confirmation (FR-030) and on off-thread generation, and FR-036 requires it to
+  report whether a verified puzzle was actually produced -- an outcome an early
+  acknowledgement could not carry. Recorded in plan.md § Complexity Tracking.
+
+  Scope of the deviation: three tools, latency only. The other thirteen gate here.
+*/
+const EXEMPT = new Set([
+  'playback_deduction_sequence',
+  'load_technique_practice',
+  'switch_difficulty',
+]);
 const BUDGET_MS = 100;
 const SAMPLES = 40;
 
@@ -46,6 +59,19 @@ const INPUTS: Record<string, Record<string, unknown>> = {
   auto_fill_all_pencil_marks: {
     acknowledges_replacing_marks: true,
     explanation: 'Pencilling every legal candidate so the naked pairs become visible to you.',
+  },
+  // Feature 003. `switch_difficulty` is absent deliberately -- see EXEMPT.
+  show_coordinate_ruler: {
+    explanation: 'Numbering the grid so you can name a cell to me without counting squares first.',
+  },
+  hide_coordinate_ruler: {
+    explanation: 'Taking the row and column guides away again now that you have the hang of it.',
+  },
+  pause_timer: {
+    explanation: 'You have been at this a while now, so let us stop the clock for a moment.',
+  },
+  resume_timer: {
+    explanation: 'Starting the clock again so we can pick up exactly where we left off before.',
   },
 };
 
