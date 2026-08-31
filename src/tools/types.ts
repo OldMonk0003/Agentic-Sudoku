@@ -51,6 +51,10 @@ export type ErrorCode =
   | 'no-annotation-target'
   | 'playback-interrupted'
   | 'playback-step-failed'
+  // feature 003
+  | 'unknown-difficulty'
+  | 'confirmation-pending'
+  | 'generation-failed'
   | 'internal-error';
 
 export interface ToolError {
@@ -81,8 +85,14 @@ export interface ToolDescriptor {
   execute(input: unknown, options?: ToolExecuteOptions): Promise<ToolResult>;
 }
 
-/** Every result carries the version, so a stale agent finds out on its next call. */
-export const TOOL_SURFACE_VERSION = '1.0.0';
+/**
+ * Every result carries the version, so a stale agent finds out on its next call.
+ *
+ * 1.0.0 -> 1.1.0 for feature 003: five tools ADDED, none renamed, none removed,
+ * no schema narrowed. 002/FR-010 reserves MAJOR for exactly those three, so this
+ * is a MINOR bump and an agent written against 1.0.0 keeps working.
+ */
+export const TOOL_SURFACE_VERSION = '1.1.0';
 
 export function success(tool: string, data: unknown): ToolResult {
   return { ok: true, tool, surface_version: TOOL_SURFACE_VERSION, data };
