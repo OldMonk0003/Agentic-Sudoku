@@ -50,7 +50,7 @@ test("002's eleven tools are all still registered in the browser", async ({ page
   }
 
   // Grows with each slice of 003; complete at sixteen.
-  expect(names).toHaveLength(14);
+  expect(names).toHaveLength(16);
   expect(new Set(names).size).toBe(names.length);
 });
 

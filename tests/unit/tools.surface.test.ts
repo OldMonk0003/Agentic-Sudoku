@@ -39,7 +39,7 @@ const SURFACE_002 = [
 const SURFACE_003: readonly string[] = [
   'show_coordinate_ruler', 'hide_coordinate_ruler',
   'switch_difficulty',
-  // US4  'pause_timer', 'resume_timer',
+  'pause_timer', 'resume_timer',
 ];
 
 const EXPECTED_SO_FAR = [...SURFACE_002, ...SURFACE_003];

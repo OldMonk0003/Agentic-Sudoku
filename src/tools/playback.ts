@@ -225,7 +225,13 @@ export async function runSequence(
   // FR-048 says the learner taking over ends it.
   const baselineActivity = agentStore.getState().learnerActivity;
   const interrupted = () =>
-    agentStore.getState().learnerActivity !== baselineActivity || options.signal?.aborted === true;
+    agentStore.getState().learnerActivity !== baselineActivity ||
+    options.signal?.aborted === true ||
+    // 003/FR-042: a pause landing mid-sequence stops it. Steps must never
+    // execute behind the pause overlay -- the learner cannot see the board, so a
+    // sequence that kept placing digits would be doing precisely what the
+    // narration contract exists to prevent: changing the board unwatched.
+    store.getState().status !== 'playing';
 
   agentStore.dispatch(playbackStarted({ totalSteps: steps.length }));
 

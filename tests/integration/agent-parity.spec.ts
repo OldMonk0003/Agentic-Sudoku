@@ -76,12 +76,22 @@ test('001 still holds: select, type, erase, undo, all by keyboard', async ({ pag
 });
 
 test('001 still holds: highlighting, conflicts, pencil mode, timer, pause', async ({ page }) => {
-  await page.locator('[data-index="40"]').click();
+  /*
+    Pick an EMPTY, non-clue cell rather than hardcoding index 40.
+    Puzzles are generated with a time-based seed, so cell 40 is a starting clue
+    on some boards -- and pencilling into a clue correctly does nothing, which
+    made this test fail perhaps one run in five. Found while adding feature 003;
+    the flake predates it.
+  */
+  const target = page.locator('[role="gridcell"]:not([data-origin="clue"])').first();
+  const index = await target.getAttribute('data-index');
+
+  await target.click();
   await expect(page.locator('[data-tier="crosshair"]').first()).toBeVisible();
 
   await page.getByRole('switch', { name: 'Pencil notes' }).click();
   await page.keyboard.press('3');
-  await expect(page.locator('[data-index="40"] [data-candidate="3"]')).toHaveCount(1);
+  await expect(page.locator(`[data-index="${index}"] [data-candidate="3"]`)).toHaveCount(1);
 
   await page.getByRole('button', { name: 'Pause' }).click();
   await expect(page.getByTestId('pause-overlay')).toBeVisible();

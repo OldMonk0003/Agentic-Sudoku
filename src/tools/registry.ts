@@ -13,6 +13,8 @@ import { loadTechniquePractice } from './tools/loadTechniquePractice';
 import { showCoordinateRuler } from './tools/showCoordinateRuler';
 import { hideCoordinateRuler } from './tools/hideCoordinateRuler';
 import { switchDifficulty } from './tools/switchDifficulty';
+import { pauseTimer } from './tools/pauseTimer';
+import { resumeTimer } from './tools/resumeTimer';
 import { TOOL_SURFACE_VERSION, type ToolDescriptor } from './types';
 
 /**
@@ -56,6 +58,8 @@ export const descriptors: readonly ToolDescriptor[] = [
   showCoordinateRuler,
   hideCoordinateRuler,
   switchDifficulty,
+  pauseTimer,
+  resumeTimer,
 ];
 
 export interface RegistrationHandle {

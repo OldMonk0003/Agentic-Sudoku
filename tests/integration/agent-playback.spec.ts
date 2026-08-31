@@ -175,3 +175,36 @@ test('a mixed sequence can highlight, beam, and fill', async ({ page }) => {
   await expect(page.locator('[data-agent-annotation="target"]')).toHaveCount(1);
   await expect(page.locator('[data-agent-beam="row"]')).toHaveCount(9);
 });
+
+/**
+ * Feature 003: pausing stops a walkthrough (FR-042).
+ *
+ * Steps must never execute behind the pause overlay. The learner cannot see the
+ * board, so a sequence that kept placing digits would be doing exactly what the
+ * narration contract exists to prevent -- changing the board where nobody is
+ * watching.
+ */
+test('an agent pause stops a walkthrough at its last completed step (FR-042)', async ({ page }) => {
+  const [a, b, c] = await emptyIndices(page, 3);
+
+  const running = callTool(page, 'playback_deduction_sequence', {
+    explanation: SEQUENCE,
+    steps: [fillStep(a!, 4, 'First'), fillStep(b!, 5, 'Second'), fillStep(c!, 6, 'Third')],
+  });
+
+  await callTool(page, 'pause_timer', {
+    explanation: 'Stopping the clock here so you have a moment to take in what we just did.',
+  });
+
+  const result = await running;
+
+  // It reports normally -- an interruption is an outcome, not a fault (FR-049).
+  expect(result.ok).toBe(true);
+  expect(result.data).toMatchObject({ stopped_because: 'interrupted' });
+
+  // It did NOT run to completion behind the overlay.
+  expect((result.data as { steps_completed: number }).steps_completed).toBeLessThan(3);
+
+  // And nothing is still running.
+  await expect(page.getByTestId('playback-indicator')).toHaveCount(0);
+});

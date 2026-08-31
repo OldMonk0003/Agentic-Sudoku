@@ -211,21 +211,21 @@ resume too.
 
 ### Tests for User Story 4 (write first, watch fail)
 
-- [ ] T072 [P] [US4] Write `tests/contract/pauseTimer.test.ts`: the success shape, `wrong-status` when the board is not running with the message naming the actual state, and the explanation requirement (FR-041)
-- [ ] T073 [P] [US4] Write `tests/contract/resumeTimer.test.ts` including the carve-out: `resume_timer` **succeeds while the board is paused** (FR-040). Pin it explicitly, so the exemption cannot be closed by accident and turn `pause_timer` into a one-way door for the agent
-- [ ] T074 [P] [US4] Write `tests/contract/pausedWrites.test.ts` asserting that while paused **every other** write tool in `descriptors` is rejected and **every read** still succeeds (002/FR-045)
-- [ ] T075 [P] [US4] Write `tests/integration/agent-pause.spec.ts`: the agent pauses, the learner's **own** Resume control works with no agent involvement (FR-043), and then an agent resume works too
-- [ ] T076 [P] [US4] Extend `tests/integration/agent-playback.spec.ts` to assert a pause during a walkthrough stops it at the last completed step — steps must never execute behind the overlay (FR-042)
-- [ ] T077 [P] [US4] Write `tests/unit/pauseResume.history.test.ts` asserting neither is undoable and neither touches `history` (FR-044)
-- [ ] T078 [P] [US4] Extend `tests/perf/agent-tools.spec.ts` to gate both at the 100 ms p95 budget
-- [ ] T079 [P] [US4] Write `tests/a11y/agent-pause.spec.ts` asserting an agent-initiated pause overlay is escapable keyboard-only through the learner's Resume control
+- [X] T072 [P] [US4] Write `tests/contract/pauseTimer.test.ts`: the success shape, `wrong-status` when the board is not running with the message naming the actual state, and the explanation requirement (FR-041)
+- [X] T073 [P] [US4] Write `tests/contract/resumeTimer.test.ts` including the carve-out: `resume_timer` **succeeds while the board is paused** (FR-040). Pin it explicitly, so the exemption cannot be closed by accident and turn `pause_timer` into a one-way door for the agent
+- [X] T074 [P] [US4] Write `tests/contract/pausedWrites.test.ts` asserting that while paused **every other** write tool in `descriptors` is rejected and **every read** still succeeds (002/FR-045)
+- [X] T075 [P] [US4] Write `tests/integration/agent-pause.spec.ts`: the agent pauses, the learner's **own** Resume control works with no agent involvement (FR-043), and then an agent resume works too
+- [X] T076 [P] [US4] Extend `tests/integration/agent-playback.spec.ts` to assert a pause during a walkthrough stops it at the last completed step — steps must never execute behind the overlay (FR-042)
+- [X] T077 [P] [US4] Write `tests/unit/pauseResume.history.test.ts` asserting neither is undoable and neither touches `history` (FR-044)
+- [X] T078 [P] [US4] Extend `tests/perf/agent-tools.spec.ts` to gate both at the 100 ms p95 budget
+- [X] T079 [P] [US4] Write `tests/a11y/agent-pause.spec.ts` asserting an agent-initiated pause overlay is escapable keyboard-only through the learner's Resume control
 
 ### Implementation for User Story 4
 
-- [ ] T080 [P] [US4] Implement `src/tools/tools/pauseTimer.ts` through `defineWriteTool` over the store's existing `pause` action
-- [ ] T081 [P] [US4] Implement `src/tools/tools/resumeTimer.ts` through `defineWriteTool` over the store's existing `resume` action. **No status gate is added at the wrapper level** — the carve-out exists by construction because `resumeSession` already requires `status === 'paused'`
-- [ ] T082 [US4] Stop a running walkthrough on pause in `src/tools/playback.ts`, which already watches the agent store for `learnerActed` (FR-042)
-- [ ] T083 [US4] Register both in `src/tools/registry.ts`, taking `descriptors` to 16
+- [X] T080 [P] [US4] Implement `src/tools/tools/pauseTimer.ts` through `defineWriteTool` over the store's existing `pause` action
+- [X] T081 [P] [US4] Implement `src/tools/tools/resumeTimer.ts` through `defineWriteTool` over the store's existing `resume` action. **No status gate is added at the wrapper level** — the carve-out exists by construction because `resumeSession` already requires `status === 'paused'`
+- [X] T082 [US4] Stop a running walkthrough on pause in `src/tools/playback.ts`, which already watches the agent store for `learnerActed` (FR-042)
+- [X] T083 [US4] Register both in `src/tools/registry.ts`, taking `descriptors` to 16
 
 **Checkpoint**: US4 complete. **The surface is complete at 16 tools.**
 

@@ -67,6 +67,11 @@ const INPUTS: Record<string, Record<string, unknown>> = {
   hide_coordinate_ruler: {
     explanation: 'Taking the row and column guides away again now that you have the hang of it.',
   },
+  /*
+    These two are measured LAST and as a pair, because pausing mid-sweep would
+    make every later tool fail for the wrong reason (wrong-status, not slowness).
+    The harness restores the running state after each sample.
+  */
   pause_timer: {
     explanation: 'You have been at this a while now, so let us stop the clock for a moment.',
   },
