@@ -74,3 +74,23 @@ test('resuming restores the board and continues the clock', async ({ page }) => 
   await expect(page.getByTestId('pause-overlay')).toHaveCount(0);
   await expect(page.locator('[role="gridcell"][data-origin="clue"]').first()).toBeVisible();
 });
+
+/**
+ * Feature 003: the spotlight honours reduced motion too (FR-027).
+ *
+ * Appended here rather than left only in agent-spotlight.spec.ts so the whole
+ * reduced-motion story stays readable in one file.
+ */
+test('the agent spotlight does not animate under reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.waitForSelector('[role="gridcell"]');
+
+  const moving = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-spotlit="true"]')].some((el) => {
+      const style = getComputedStyle(el);
+      return style.animationDuration !== '0s' && style.animationName !== 'none';
+    }),
+  );
+  expect(moving).toBe(false);
+});
