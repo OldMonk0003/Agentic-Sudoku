@@ -21,8 +21,9 @@ afterEach(cleanup);
 
 describe('CoordinateRuler', () => {
   it('renders nothing at all when the ruler is hidden', () => {
+    // jest-dom matchers are not configured in this project; assert directly.
     const { container } = render(<CoordinateRuler axis="columns" />);
-    expect(container).toBeEmptyDOMElement();
+    expect(container.innerHTML).toBe('');
   });
 
   it('numbers the columns 1 to 9 left to right (FR-007)', () => {

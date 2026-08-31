@@ -13,8 +13,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test tests/a11y",
-    "review:agent": "playwright test tests/review/agent-demo.spec.ts --headed --project=chromium",
-    "test:perf": "playwright test tests/perf"
+    "review:agent": "playwright test --config=playwright.review.config.ts agent-demo --headed",
+    "test:perf": "playwright test tests/perf",
+    "review:003": "playwright test --config=playwright.review.config.ts ruler-and-spotlight"
   },
   "dependencies": {
     "lucide-react": "^1.37.0",

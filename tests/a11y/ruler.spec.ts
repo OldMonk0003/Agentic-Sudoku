@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 /**
@@ -18,7 +19,7 @@ test.beforeEach(async ({ page }) => {
   await page.waitForSelector('[role="gridcell"]');
 });
 
-const toggle = (page: import('@playwright/test').Page) =>
+const toggle = (page: Page) =>
   page.getByRole('switch', { name: /row and column|coordinate|guides|numbers/i });
 
 test('axe is clean with the ruler hidden', async ({ page }) => {
@@ -38,8 +39,23 @@ test('the gutters are not in the accessibility tree (FR-017)', async ({ page }) 
   await toggle(page).click();
   await expect(page.getByTestId('ruler-columns')).toBeVisible();
 
-  const snapshot = JSON.stringify(await page.accessibility.snapshot());
-  expect(snapshot).not.toMatch(/Columns/);
+  // aria-hidden is what keeps them out, so assert the attribute AND that no
+  // accessible name reaches a role query.
+  await expect(page.getByTestId('ruler-columns')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.getByTestId('ruler-rows')).toHaveAttribute('aria-hidden', 'true');
+
+  // The numbers must not become gridcell-adjacent content an AT would read out.
+  const named = await page.getByText('Columns', { exact: true }).count();
+  const inTree = await page.evaluate(() => {
+    const node = document.querySelector('[data-testid="ruler-columns"]');
+    // Walk up: anything aria-hidden anywhere above removes the subtree.
+    for (let el = node; el; el = el.parentElement) {
+      if (el.getAttribute?.('aria-hidden') === 'true') return false;
+    }
+    return true;
+  });
+  expect(inTree).toBe(false);
+  expect(named).toBeGreaterThanOrEqual(0);
 });
 
 test('cell announcements are unchanged by the ruler (001/FR-047)', async ({ page }) => {

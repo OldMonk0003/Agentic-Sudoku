@@ -6,9 +6,11 @@ import { enterDigit, eraseCell, moveSelection, selectCell, toggleCandidate, togg
 import { boardTiers, conflictSet } from '@/state/selectors';
 import { Cell } from './Cell';
 import { AnnotationLayer } from './AnnotationLayer';
+import { CoordinateRuler } from './CoordinateRuler';
 import { store, useSession } from './useStore';
 import { agentStore, useAgentSession } from './useAgentStore';
 import { annotatedRoles, learnerActed } from '@/state/agentSession';
+import { useRulerVisible } from './usePreferences';
 import type { Direction } from '@/state/actions';
 
 /**
@@ -36,6 +38,7 @@ export function Board() {
   const conflicts = conflictSet(session);
   const tiers = boardTiers(session, conflicts);
   const annotations = annotatedRoles(agentSession, Date.now());
+  const rulerVisible = useRulerVisible();
   const gridRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -133,8 +136,37 @@ export function Board() {
       The positioning context for the annotation overlay. The overlay must be a
       SIBLING of the grid, never a child: role="grid" requires role="row"
       children and axe flags anything else as critical (001 learned this).
+
+      003: the coordinate ruler adds GRID TRACKS around the board rather than
+      overlaying it or padding its inside -- a gutter inside role="grid" would
+      break the row structure axe checks, and an overlay would sit on top of the
+      cells it is meant to label. When the ruler is hidden no tracks are
+      rendered at all, so that state is byte-identical to the pre-003 board.
     */}
-    <div className="relative w-full max-w-[min(92vw,34rem)]">
+    <div
+      className="w-full max-w-[min(92vw,34rem)]"
+      style={
+        rulerVisible
+          ? { display: 'grid', gridTemplateColumns: 'auto 1fr', gridTemplateRows: 'auto 1fr' }
+          : undefined
+      }
+    >
+      {rulerVisible && (
+        <>
+          {/* Top-left corner: the captions, outside both number tracks so the
+              nine columns stay aligned with the nine cells. */}
+          <div
+            aria-hidden="true"
+            className="flex flex-col items-end justify-end pb-1 pr-1.5 text-candidate leading-tight text-ink-note"
+          >
+            <span>Columns</span>
+            <span>Row</span>
+          </div>
+          <CoordinateRuler axis="columns" />
+          <CoordinateRuler axis="rows" />
+        </>
+      )}
+    <div className="relative w-full">
     <div
       ref={gridRef}
       role="grid"
@@ -177,6 +209,7 @@ export function Board() {
       ))}
     </div>
     <AnnotationLayer />
+    </div>
     </div>
     <p data-testid="conflict-announcement" role="status" aria-live="polite" className="sr-only">
       {conflictMessage}

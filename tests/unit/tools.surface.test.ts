@@ -37,7 +37,7 @@ const SURFACE_002 = [
  * shipped, not what is planned. Complete at sixteen.
  */
 const SURFACE_003: readonly string[] = [
-  // US1  'show_coordinate_ruler', 'hide_coordinate_ruler',
+  'show_coordinate_ruler', 'hide_coordinate_ruler',
   // US3  'switch_difficulty',
   // US4  'pause_timer', 'resume_timer',
 ];

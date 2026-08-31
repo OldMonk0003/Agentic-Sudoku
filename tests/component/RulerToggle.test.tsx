@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { act, render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RulerToggle } from '@/ui/RulerToggle';
 import { preferencesStore, hideRuler } from '@/state/preferences';
@@ -64,7 +64,10 @@ describe('RulerToggle', () => {
     expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('false');
 
     // The agent's tool dispatches the same action against the same store.
-    preferencesStore.dispatch({ type: 'showRuler' });
+    // Wrapped in act() because the dispatch originates OUTSIDE React -- which is
+    // exactly the point: this component learns about it through
+    // useSyncExternalStore, without knowing an agent exists.
+    act(() => { preferencesStore.dispatch({ type: 'showRuler' }); });
     expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('true');
   });
 });

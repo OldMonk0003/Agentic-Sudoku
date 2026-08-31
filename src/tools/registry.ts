@@ -10,6 +10,8 @@ import { updatePencilMarks } from './tools/updatePencilMarks';
 import { autoFillAllPencilMarks } from './tools/autoFillAllPencilMarks';
 import { playbackDeductionSequence } from './tools/playbackDeductionSequence';
 import { loadTechniquePractice } from './tools/loadTechniquePractice';
+import { showCoordinateRuler } from './tools/showCoordinateRuler';
+import { hideCoordinateRuler } from './tools/hideCoordinateRuler';
 import { TOOL_SURFACE_VERSION, type ToolDescriptor } from './types';
 
 /**
@@ -49,6 +51,9 @@ export const descriptors: readonly ToolDescriptor[] = [
   autoFillAllPencilMarks,
   playbackDeductionSequence,
   loadTechniquePractice,
+  // Feature 003.
+  showCoordinateRuler,
+  hideCoordinateRuler,
 ];
 
 export interface RegistrationHandle {

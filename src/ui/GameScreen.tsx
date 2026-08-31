@@ -5,6 +5,7 @@ import { Board } from './Board';
 import { Keypad } from './Keypad';
 import { DifficultySelect } from './DifficultySelect';
 import { ModeToggle } from './ModeToggle';
+import { RulerToggle } from './RulerToggle';
 import { Timer } from './Timer';
 import { Controls } from './Controls';
 import { CompletionBanner } from './CompletionBanner';
@@ -18,6 +19,8 @@ import { expire, setReducedMotion } from '@/state/agentSession';
 import { resume, loadSession } from '@/state/actions';
 import { store } from '@/state/store';
 import { attachPersistence, restoreSession } from '@/state/persistence';
+import { preferencesStore, loadPreferences } from '@/state/preferences';
+import { attachPreferencePersistence, restorePreferences } from '@/state/preferences';
 import { requestPuzzle } from './puzzleLoader';
 import { useSelector, useSession } from './useStore';
 
@@ -49,6 +52,20 @@ export function GameScreen() {
     () => attachPersistence(store, { onFailure: () => setStorageBlocked(true) }),
     [],
   );
+
+  /*
+    The ruler preference, restored and then kept saved (003/FR-015).
+
+    Its OWN storage key, deliberately: the session's schema version stays at 1,
+    so every saved game written before this feature still restores
+    (003/research.md R2). A failure here is silent -- the ruler still works for
+    this session, and the single storage notice above already says "this device
+    will not save".
+  */
+  useEffect(() => {
+    preferencesStore.dispatch(loadPreferences(restorePreferences()));
+    return attachPreferencePersistence(preferencesStore);
+  }, []);
 
   /*
     THE VIEW OWNS THE INTERVAL; THE STORE OWNS THE NUMBER.
@@ -92,6 +109,9 @@ export function GameScreen() {
         <div className="flex flex-wrap items-center justify-center gap-3">
           <DifficultySelect />
           <ModeToggle />
+          {/* The learner's own control. Present with no agent, because the
+              ruler is a readability aid, not an agent affordance (003/FR-013). */}
+          <RulerToggle />
           <Timer />
           {/* Renders nothing at all when no agent host exists (FR-013). */}
           <AgentBadge />

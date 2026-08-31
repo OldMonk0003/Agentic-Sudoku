@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { installFakeHost } from '../support/browserFakeHost';
 
 /**
@@ -15,7 +16,7 @@ import { installFakeHost } from '../support/browserFakeHost';
 
 const EXPLANATION = 'Numbering the grid so you can name a cell to me without counting squares first.';
 
-async function call(page: import('@playwright/test').Page, name: string, args: Record<string, unknown> = {}) {
+async function call(page: Page, name: string, args: Record<string, unknown> = {}) {
   return page.evaluate(
     ([n, a]) =>
       (window as unknown as { call: (n: string, a: object) => Promise<unknown> }).call(
@@ -26,7 +27,7 @@ async function call(page: import('@playwright/test').Page, name: string, args: R
   );
 }
 
-const ruler = (page: import('@playwright/test').Page) => page.getByTestId('ruler-columns');
+const ruler = (page: Page) => page.getByTestId('ruler-columns');
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(installFakeHost);
