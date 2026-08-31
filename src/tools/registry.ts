@@ -12,6 +12,7 @@ import { playbackDeductionSequence } from './tools/playbackDeductionSequence';
 import { loadTechniquePractice } from './tools/loadTechniquePractice';
 import { showCoordinateRuler } from './tools/showCoordinateRuler';
 import { hideCoordinateRuler } from './tools/hideCoordinateRuler';
+import { switchDifficulty } from './tools/switchDifficulty';
 import { TOOL_SURFACE_VERSION, type ToolDescriptor } from './types';
 
 /**
@@ -54,6 +55,7 @@ export const descriptors: readonly ToolDescriptor[] = [
   // Feature 003.
   showCoordinateRuler,
   hideCoordinateRuler,
+  switchDifficulty,
 ];
 
 export interface RegistrationHandle {

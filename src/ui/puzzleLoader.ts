@@ -2,6 +2,7 @@
 
 import { generatePuzzle } from '@/engine/generate';
 import { beginGenerating, loadPuzzle } from '@/state/actions';
+import { agentStore, puzzleGenerationFailed } from '@/state/agentSession';
 import { store } from '@/state/store';
 import type { Difficulty } from '@/state/types';
 import type { GenerateWorkerRequest, GenerateWorkerResponse } from '@/workers/generate.worker';
@@ -48,6 +49,10 @@ function retry(difficulty: Difficulty, seed: number, requestId: number): void {
   const used = retriesFor.get(requestId) ?? 0;
   if (used >= MAX_RETRIES) {
     retriesFor.delete(requestId);
+    // 003/FR-036: giving up SILENTLY left `switch_difficulty` able to fail only
+    // by timing out. The agent must be told the attempt failed, so the learner's
+    // board is explicitly reported as untouched rather than merely unchanged.
+    agentStore.dispatch(puzzleGenerationFailed());
     return;
   }
   retriesFor.set(requestId, used + 1);

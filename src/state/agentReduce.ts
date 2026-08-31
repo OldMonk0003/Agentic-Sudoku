@@ -1,6 +1,6 @@
 import { ANNOTATION_TTL_MS, materialise, unexpired } from './annotations';
 import { EXPLANATION_TTL_MS, TOAST_TTL_MS, toastOrNull, unexpiredExplanations } from './explanations';
-import { CONFIRMATION_TTL_MS } from './confirmation';
+import { CONFIRMATION_TTL_MS, canAsk } from './confirmation';
 import { liveSpotlight, makeSpotlight } from './spotlight';
 import type { AgentAction } from './agentActions';
 import type { AgentSession } from './agentSession';
@@ -141,11 +141,17 @@ export function reduceAgent(session: AgentSession, action: AgentAction): AgentSe
       return { ...session, playback: { ...session.playback, running: false } };
 
     case 'askConfirmation':
+      // ONE SLOT. A second ask while one is still unanswered is REFUSED, never
+      // queued and never stacked -- two prompts on screen would make it
+      // ambiguous which board the learner is agreeing to lose (003/FR-030).
+      if (!canAsk(session.confirmation, action.now)) return null;
+
       return {
         ...session,
         confirmation: {
           id: `c${session.nextId}`,
-          technique: action.technique,
+          kind: action.kind,
+          subject: action.subject,
           prompt: action.prompt,
           expiresAt: action.now + (action.ttlMs ?? CONFIRMATION_TTL_MS),
           answer: null,
@@ -164,6 +170,16 @@ export function reduceAgent(session: AgentSession, action: AgentAction): AgentSe
 
     case 'clearConfirmation':
       return session.confirmation === null ? null : { ...session, confirmation: null };
+
+    case 'requestPuzzle':
+      return {
+        ...session,
+        puzzleRequest: { difficulty: action.difficulty, id: session.puzzleRequests + 1 },
+        puzzleRequests: session.puzzleRequests + 1,
+      };
+
+    case 'puzzleGenerationFailed':
+      return { ...session, puzzleFailures: session.puzzleFailures + 1 };
   }
 }
 

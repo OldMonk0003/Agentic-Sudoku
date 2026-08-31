@@ -119,14 +119,27 @@ export function createDrillTool(waiter: ConfirmationWaiter = storeWaiter): ToolD
         session.cells.some((cell) => cell.candidates.size > 0);
 
       if (hasProgress) {
+        // 003 generalised the confirmation to two subjects. One slot still, so a
+        // second ask while one is unanswered is refused rather than stacked.
         agentStore.dispatch(
           askConfirmation({
-            technique,
+            kind: 'drill',
+            subject: technique,
             prompt: input.explanation,
             now: Date.now(),
           }),
         );
-        const id = agentStore.getState().confirmation!.id;
+
+        const raised = agentStore.getState().confirmation;
+        if (!raised || raised.answer !== null) {
+          return {
+            ok: false,
+            code: 'confirmation-pending',
+            message:
+              'The human is already being asked to confirm something else. Wait for that to be answered, then try again.',
+          };
+        }
+        const id = raised.id;
 
         const answer = await waiter.wait(id, CONFIRMATION_TTL_MS);
         agentStore.dispatch(clearConfirmation());

@@ -171,28 +171,28 @@ puzzle with a clean clock and empty undo history.
 
 ### Tests for User Story 3 (write first, watch fail)
 
-- [ ] T053 [P] [US3] Extend `tests/unit/agentSession.*` with a confirmation test asserting the generalised shape: `kind: 'drill' | 'difficulty'`, `subject` replacing `technique`, the **single slot**, rejection of a second ask while one is pending, and the 60 s timeout resolving as `declined` ([research.md § R8](./research.md))
-- [ ] T054 [P] [US3] Write `tests/unit/agentSession.puzzleRequest.test.ts` asserting the request counter is observable by a subscriber and that `puzzleGenerationFailed` is observable — with no DOM, since this is the Tools↔UI seam ([research.md § R1](./research.md))
-- [ ] T055 [P] [US3] Write `tests/contract/switchDifficulty.test.ts`: the enum-bounded `difficulty`, `unknown-difficulty` carrying the available levels, `outcome: 'loaded'` and `outcome: 'declined'` **both** as `ok: true`, `confirmation-pending`, `generation-failed`, `wrong-status` while paused, and success while complete
-- [ ] T056 [P] [US3] Write `tests/integration/agent-difficulty.spec.ts`: with progress on the board, a decline leaves it **bit-identical**; an accept loads a fresh board with the clock at zero and Undo unavailable (FR-030, FR-033)
-- [ ] T057 [P] [US3] Extend `tests/integration/agent-playback.spec.ts` to assert a difficulty change stops a running walkthrough and reports how far it got (FR-034)
-- [ ] T058 [P] [US3] Write `tests/unit/switchDifficulty.uniqueness.test.ts` asserting every board loaded through this path has exactly one solution and a **derived** rating, never a trusted one (FR-032, Principle IV)
-- [ ] T059 [P] [US3] Extend `tests/unit/tools.layering.test.ts` to assert `src/tools/**` imports nothing from `src/ui/**` — the lint rule's test-side twin, so the R1 seam cannot be quietly bypassed
-- [ ] T060 [P] [US3] Write `tests/a11y/agent-difficulty.spec.ts` asserting the confirmation banner is not a modal, never takes focus, and is axe clean
-- [ ] T061 [P] [US3] Extend `tests/perf/agent-tools.spec.ts` to assert **no long task** blocks the learner during generation, while explicitly exempting `switch_difficulty` itself from the 100 ms gate per the recorded deviation
+- [X] T053 [P] [US3] Extend `tests/unit/agentSession.*` with a confirmation test asserting the generalised shape: `kind: 'drill' | 'difficulty'`, `subject` replacing `technique`, the **single slot**, rejection of a second ask while one is pending, and the 60 s timeout resolving as `declined` ([research.md § R8](./research.md))
+- [X] T054 [P] [US3] Write `tests/unit/agentSession.puzzleRequest.test.ts` asserting the request counter is observable by a subscriber and that `puzzleGenerationFailed` is observable — with no DOM, since this is the Tools↔UI seam ([research.md § R1](./research.md))
+- [X] T055 [P] [US3] Write `tests/contract/switchDifficulty.test.ts`: the enum-bounded `difficulty`, `unknown-difficulty` carrying the available levels, `outcome: 'loaded'` and `outcome: 'declined'` **both** as `ok: true`, `confirmation-pending`, `generation-failed`, `wrong-status` while paused, and success while complete
+- [X] T056 [P] [US3] Write `tests/integration/agent-difficulty.spec.ts`: with progress on the board, a decline leaves it **bit-identical**; an accept loads a fresh board with the clock at zero and Undo unavailable (FR-030, FR-033)
+- [X] T057 [P] [US3] Extend `tests/integration/agent-playback.spec.ts` to assert a difficulty change stops a running walkthrough and reports how far it got (FR-034)
+- [X] T058 [P] [US3] Write `tests/unit/switchDifficulty.uniqueness.test.ts` asserting every board loaded through this path has exactly one solution and a **derived** rating, never a trusted one (FR-032, Principle IV)
+- [X] T059 [P] [US3] Extend `tests/unit/tools.layering.test.ts` to assert `src/tools/**` imports nothing from `src/ui/**` — the lint rule's test-side twin, so the R1 seam cannot be quietly bypassed
+- [X] T060 [P] [US3] Write `tests/a11y/agent-difficulty.spec.ts` asserting the confirmation banner is not a modal, never takes focus, and is axe clean
+- [X] T061 [P] [US3] Extend `tests/perf/agent-tools.spec.ts` to assert **no long task** blocks the learner during generation, while explicitly exempting `switch_difficulty` itself from the 100 ms gate per the recorded deviation
 
 ### Implementation for User Story 3
 
-- [ ] T062 [US3] Generalise `src/state/confirmation.ts`: add `kind: ConfirmationKind`, rename `technique` to `subject`, keeping `CONFIRMATION_TTL_MS` and the decline-on-timeout rule unchanged
-- [ ] T063 [US3] Update `src/state/agentActions.ts` and `src/state/agentReduce.ts` for the generalised confirmation, and **reject** a second `askConfirmation` while one is pending rather than overwriting it
-- [ ] T064 [P] [US3] Update `src/tools/tools/loadTechniquePractice.ts` to the new confirmation shape (`kind: 'drill'`) with no behaviour change
-- [ ] T065 [P] [US3] Update `src/ui/ConfirmationBanner.tsx` to render either kind
-- [ ] T066 [US3] Add `puzzleRequest`, the `puzzleRequests` counter, and `puzzleGenerationFailed` to `src/state/agentActions.ts`, `agentReduce.ts`, and `agentSession.ts`, mirroring how `disconnectRequests` already works in the opposite direction
-- [ ] T067 [US3] Report retry exhaustion from `src/ui/puzzleLoader.ts` — it currently gives up silently, and FR-036 requires the agent to be told the attempt failed
-- [ ] T068 [US3] Subscribe to puzzle requests in `src/ui/GameScreen.tsx` and call `requestPuzzle` from `src/ui/puzzleLoader.ts`, dispatching `puzzleGenerationFailed` when the retry budget is exhausted
-- [ ] T069 [US3] Implement `src/tools/tools/switchDifficulty.ts`: enum validation, progress detection, the confirmation gate, raising the request, awaiting the outcome from the **game** store, and mapping to `loaded` / `declined` / `generation-failed`
-- [ ] T070 [US3] Register it in `src/tools/registry.ts`, taking `descriptors` to 14
-- [ ] T071 [US3] Run `npm run lint`. If `src/tools` ever imports `src/ui`, **this is what fails, and that failure is correct** — it is the rule that forced the seam in the first place
+- [X] T062 [US3] Generalise `src/state/confirmation.ts`: add `kind: ConfirmationKind`, rename `technique` to `subject`, keeping `CONFIRMATION_TTL_MS` and the decline-on-timeout rule unchanged
+- [X] T063 [US3] Update `src/state/agentActions.ts` and `src/state/agentReduce.ts` for the generalised confirmation, and **reject** a second `askConfirmation` while one is pending rather than overwriting it
+- [X] T064 [P] [US3] Update `src/tools/tools/loadTechniquePractice.ts` to the new confirmation shape (`kind: 'drill'`) with no behaviour change
+- [X] T065 [P] [US3] Update `src/ui/ConfirmationBanner.tsx` to render either kind
+- [X] T066 [US3] Add `puzzleRequest`, the `puzzleRequests` counter, and `puzzleGenerationFailed` to `src/state/agentActions.ts`, `agentReduce.ts`, and `agentSession.ts`, mirroring how `disconnectRequests` already works in the opposite direction
+- [X] T067 [US3] Report retry exhaustion from `src/ui/puzzleLoader.ts` — it currently gives up silently, and FR-036 requires the agent to be told the attempt failed
+- [X] T068 [US3] Subscribe to puzzle requests in `src/ui/GameScreen.tsx` and call `requestPuzzle` from `src/ui/puzzleLoader.ts`, dispatching `puzzleGenerationFailed` when the retry budget is exhausted
+- [X] T069 [US3] Implement `src/tools/tools/switchDifficulty.ts`: enum validation, progress detection, the confirmation gate, raising the request, awaiting the outcome from the **game** store, and mapping to `loaded` / `declined` / `generation-failed`
+- [X] T070 [US3] Register it in `src/tools/registry.ts`, taking `descriptors` to 14
+- [X] T071 [US3] Run `npm run lint`. If `src/tools` ever imports `src/ui`, **this is what fails, and that failure is correct** — it is the rule that forced the seam in the first place
 
 **Checkpoint**: US3 complete and deployable. 14 tools. The agent can change the level, and cannot
 discard the learner's work without being told to.

@@ -68,6 +68,27 @@ export function GameScreen() {
   }, []);
 
   /*
+    THE TOOLS -> UI SEAM FOR GENERATION (003/research.md R1).
+
+    `switch_difficulty` needs a generated puzzle, and generation lives HERE
+    because `Worker` is a browser API -- while `src/tools` importing `src/ui` is
+    a lint error, not a convention. So the tool raises a request on the agent
+    store and this subscription performs it. Neither layer imports the other.
+
+    The same shape `requestDisconnect` already runs in, with the arrow reversed:
+    there, the Disconnect button raises a counter and registry.ts watches it.
+  */
+  useEffect(() => {
+    let seen = agentStore.getState().puzzleRequests;
+    return agentStore.subscribe(() => {
+      const { puzzleRequests, puzzleRequest } = agentStore.getState();
+      if (puzzleRequests === seen || !puzzleRequest) return;
+      seen = puzzleRequests;
+      requestPuzzle(puzzleRequest.difficulty);
+    });
+  }, []);
+
+  /*
     THE VIEW OWNS THE INTERVAL; THE STORE OWNS THE NUMBER.
     Annotations and explanations carry an absolute `expiresAt`, and expiry is a
     pure selector over it -- so the state layer runs no timer and 002/FR-033 is

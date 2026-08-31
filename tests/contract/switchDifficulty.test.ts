@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { store } from '@/state/store';
 import { newPuzzle, enterDigitAt, pause, tick } from '@/state/actions';
-import { agentStore, clearConfirmation, answerConfirmation, askConfirmation } from '@/state/agentSession';
+import { agentStore, clearConfirmation, askConfirmation } from '@/state/agentSession';
 import { createSwitchDifficultyTool } from '@/tools/tools/switchDifficulty';
 import { hasUniqueSolution } from '@/engine/uniqueness';
-import { parsePuzzleString } from '@/engine/puzzleString';
 import { toCoord } from '@/engine/grid';
 
 /**

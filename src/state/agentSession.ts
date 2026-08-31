@@ -4,6 +4,7 @@ import {
 } from './annotations';
 import { onScreen, toastOrNull, type Explanation, type Toast } from './explanations';
 import { pending, type Confirmation } from './confirmation';
+import type { Difficulty } from './types';
 import { liveSpotlight, type Spotlight } from './spotlight';
 import { AGENT_ACTION_TYPES, type AgentAction } from './agentActions';
 import { reduceAgent } from './agentReduce';
@@ -53,8 +54,8 @@ export type {
   Annotation, AnnotationInput, AnnotationRole, BeamAnnotation, CellAnnotation,
 } from './annotations';
 export type { Explanation, Toast } from './explanations';
-export type { Confirmation } from './confirmation';
-export { CONFIRMATION_TTL_MS } from './confirmation';
+export type { Confirmation, ConfirmationKind } from './confirmation';
+export { CONFIRMATION_TTL_MS, canAsk } from './confirmation';
 export { ANNOTATION_TTL_MS } from './annotations';
 export { SPOTLIGHT_TTL_MS, SPOTLIGHT_MAX_CELLS, spotlitIndices, spotlightFocusIndex, spotlightEdgesFor } from './spotlight';
 export type { Spotlight, SpotlightEdges } from './spotlight';
@@ -79,6 +80,15 @@ export interface AgentSession {
    * there is no code path that could accumulate two.
    */
   readonly spotlight: Spotlight | null;
+  /**
+   * The Tools -> UI seam for generation (003/R1). The UI is subscribed and
+   * performs the generation; the Tools layer never reaches into it.
+   */
+  readonly puzzleRequest: { readonly difficulty: Difficulty; readonly id: number } | null;
+  /** Monotonic. The UI observes this rather than being called by the Tools layer. */
+  readonly puzzleRequests: number;
+  /** Monotonic. Lets switch_difficulty report FR-036 rather than only timing out. */
+  readonly puzzleFailures: number;
   /** Monotonic id source. No randomness: the constitution routes all of it through the Engine PRNG. */
   readonly nextId: number;
 }
@@ -109,6 +119,9 @@ export function emptyAgentSession(): AgentSession {
     playback: null,
     confirmation: null,
     spotlight: null,
+    puzzleRequest: null,
+    puzzleRequests: 0,
+    puzzleFailures: 0,
     nextId: 1,
   };
 }

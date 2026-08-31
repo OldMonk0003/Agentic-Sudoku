@@ -1,5 +1,7 @@
 import type { Coord } from '@/engine/grid';
 import type { AnnotationInput } from './annotations';
+import type { ConfirmationKind } from './confirmation';
+import type { Difficulty } from './types';
 
 /**
  * The vocabulary of the agent session store: every action, and nothing else.
@@ -27,9 +29,11 @@ export type AgentAction =
   | { type: 'playbackStarted'; totalSteps: number }
   | { type: 'playbackAdvanced' }
   | { type: 'playbackEnded' }
-  | { type: 'askConfirmation'; technique: string; prompt: string; now: number; ttlMs?: number }
+  | { type: 'askConfirmation'; kind: ConfirmationKind; subject: string; prompt: string; now: number; ttlMs?: number }
   | { type: 'answerConfirmation'; id: string; accepted: boolean }
-  | { type: 'clearConfirmation' };
+  | { type: 'clearConfirmation' }
+  | { type: 'requestPuzzle'; difficulty: Difficulty }
+  | { type: 'puzzleGenerationFailed' };
 
 export const agentConnected = (): AgentAction => ({ type: 'agentConnected' });
 export const agentDisconnected = (): AgentAction => ({ type: 'agentDisconnected' });
@@ -87,7 +91,8 @@ export const playbackAdvanced = (): AgentAction => ({ type: 'playbackAdvanced' }
 export const playbackEnded = (): AgentAction => ({ type: 'playbackEnded' });
 
 export const askConfirmation = (payload: {
-  technique: string;
+  kind: ConfirmationKind;
+  subject: string;
   prompt: string;
   now: number;
   ttlMs?: number;
@@ -96,11 +101,32 @@ export const answerConfirmation = (payload: { id: string; accepted: boolean }): 
   ({ type: 'answerConfirmation', id: payload.id, accepted: payload.accepted });
 export const clearConfirmation = (): AgentAction => ({ type: 'clearConfirmation' });
 
+/**
+ * The Tools -> UI seam for puzzle generation (003/R1).
+ *
+ * `requestPuzzle()` in src/ui/puzzleLoader.ts owns generation, because `Worker`
+ * is a browser API and the state layer must stay DOM-free. `src/tools` may not
+ * import `src/ui` (lint), so `switch_difficulty` raises this instead and the UI
+ * -- which is subscribed -- performs the generation.
+ *
+ * The same shape `requestDisconnect` already runs in, with the arrow reversed.
+ */
+export const requestPuzzle = (payload: { difficulty: Difficulty }): AgentAction =>
+  ({ type: 'requestPuzzle', difficulty: payload.difficulty });
+
+/**
+ * Generation gave up. Dispatched by the UI when `puzzleLoader` exhausts its
+ * retry budget -- without it, `switch_difficulty` could only fail by timing out,
+ * and 003/FR-036 requires the agent to be TOLD the attempt failed.
+ */
+export const puzzleGenerationFailed = (): AgentAction => ({ type: 'puzzleGenerationFailed' });
+
 export const AGENT_ACTION_TYPES: ReadonlySet<string> = new Set<AgentAction['type']>([
   'agentConnected', 'agentDisconnected', 'agentAbsent', 'requestDisconnect', 'learnerActed',
   'addAnnotations', 'clearAnnotations', 'raiseSpotlight', 'pushExplanation', 'dismissExplanation',
   'showToast', 'dismissToast', 'expire', 'setReducedMotion',
   'playbackStarted', 'playbackAdvanced', 'playbackEnded',
   'askConfirmation', 'answerConfirmation', 'clearConfirmation',
+  'requestPuzzle', 'puzzleGenerationFailed',
 ]);
 

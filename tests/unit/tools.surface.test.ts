@@ -38,7 +38,7 @@ const SURFACE_002 = [
  */
 const SURFACE_003: readonly string[] = [
   'show_coordinate_ruler', 'hide_coordinate_ruler',
-  // US3  'switch_difficulty',
+  'switch_difficulty',
   // US4  'pause_timer', 'resume_timer',
 ];
 

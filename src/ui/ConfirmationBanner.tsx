@@ -4,7 +4,11 @@ import { answerConfirmation, visibleConfirmation } from '@/state/agentSession';
 import { agentStore, useAgentSession } from './useAgentStore';
 
 /**
- * "Shall I replace your board with a drill?" (FR-053)
+ * "Shall I replace your board?" (002/FR-053, 003/FR-030)
+ *
+ * Feature 003 gave it a second subject -- switching difficulty -- so the accept
+ * button names what will actually happen. "Keep my board" is unchanged, because
+ * declining means the same thing whichever was asked.
  *
  * AN INLINE BANNER, NOT A MODAL, and that is the whole design.
  *
@@ -51,7 +55,7 @@ export function ConfirmationBanner() {
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring-selected',
           ].join(' ')}
         >
-          Load drill
+          {confirmation.kind === 'difficulty' ? 'Switch puzzle' : 'Load drill'}
         </button>
         <button
           type="button"

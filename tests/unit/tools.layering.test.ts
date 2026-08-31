@@ -145,9 +145,12 @@ describe('feature 003 did not bypass the Tools/UI seam', () => {
   });
 
   it('no module under src/tools imports the puzzle loader by any path', () => {
-    const offenders = toolFiles.filter((file) =>
-      /puzzleLoader/.test(readFileSync(file, 'utf8')),
-    );
+    // IMPORTS only. switchDifficulty.ts names puzzleLoader in a comment
+    // explaining precisely why it does not import it, and that explanation is
+    // the most valuable line in the file.
+    const importsLoader = /(?:from\s+['"][^'"]*puzzleLoader['"]|import\s*\(\s*['"][^'"]*puzzleLoader['"])/;
+
+    const offenders = toolFiles.filter((file) => importsLoader.test(readFileSync(file, 'utf8')));
     expect(offenders, 'switch_difficulty must signal, not call (003/R1)').toEqual([]);
   });
 });
