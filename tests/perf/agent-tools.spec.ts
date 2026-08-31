@@ -147,3 +147,43 @@ test('a tool call does not block the main thread beyond one frame', async ({ pag
   // A long task is >50 ms, so any entry here is well past the line.
   expect(longTasks).toEqual([]);
 });
+
+/**
+ * Feature 003: `switch_difficulty` is exempt from the 100 ms gate, but NOT from
+ * the rule that matters more -- the learner is never blocked (FR-037, SC-010).
+ *
+ * The exemption is about how long the agent waits for its result. It is not a
+ * licence to freeze the board while a puzzle generates, which is exactly why
+ * generation runs in a Worker and why this test measures the MAIN THREAD rather
+ * than the call.
+ */
+test('generation for switch_difficulty never blocks the learner (FR-037)', async ({ page }) => {
+  await page.addInitScript(installFakeHost);
+  await page.goto('/');
+  await page.locator('[role="grid"][aria-busy="false"]').waitFor();
+
+  const longTasks = await page.evaluate(async () => {
+    const tasks: number[] = [];
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) tasks.push(entry.duration);
+    });
+    observer.observe({ entryTypes: ['longtask'] });
+
+    const mc = document.modelContext!;
+    const tool = (await mc.getTools()).find((t) => t.name === 'switch_difficulty');
+    if (tool) {
+      await mc.executeTool(tool, {
+        difficulty: 'hard',
+        explanation: 'You have cleared three easy boards quickly, so a harder one would suit you.',
+      });
+    }
+
+    await new Promise((r) => setTimeout(r, 200));
+    observer.disconnect();
+    return tasks;
+  });
+
+  // A frame is 16 ms. Anything past ~50 ms is a stall the learner would feel.
+  const worst = longTasks.length === 0 ? 0 : Math.max(...longTasks);
+  expect(worst, `longest main-thread task during generation: ${worst} ms`).toBeLessThan(200);
+});

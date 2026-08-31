@@ -116,3 +116,38 @@ describe('module sizes against Principle III"s 300-line review trigger', () => {
     expect(over).toEqual([]);
   });
 });
+
+/**
+ * Feature 003 makes this file load-bearing in a new way.
+ *
+ * `switch_difficulty` needs a GENERATED puzzle, and generation is orchestrated by
+ * `requestPuzzle()` in src/ui/puzzleLoader.ts -- which lives in the UI layer
+ * because `Worker` is a browser API. The obvious implementation is to import it,
+ * and it is forbidden: the tool signals through the agent session store instead
+ * (003/research.md R1).
+ *
+ * The lint rule catches that, but lint is a separate command a hurried change
+ * can skip. This is its test-side twin, so the seam cannot be quietly bypassed.
+ */
+describe('feature 003 did not bypass the Tools/UI seam', () => {
+  it('no module under src/tools imports src/ui', () => {
+    const offenders: string[] = [];
+
+    for (const file of toolFiles) {
+      const source = readFileSync(file, 'utf8');
+      // Both the alias and any relative escape upwards into the view.
+      if (/from\s+['"]@\/ui\//.test(source) || /from\s+['"][./]+\/ui\//.test(source)) {
+        offenders.push(file);
+      }
+    }
+
+    expect(offenders, 'Tools must reach the UI only through the agent session store').toEqual([]);
+  });
+
+  it('no module under src/tools imports the puzzle loader by any path', () => {
+    const offenders = toolFiles.filter((file) =>
+      /puzzleLoader/.test(readFileSync(file, 'utf8')),
+    );
+    expect(offenders, 'switch_difficulty must signal, not call (003/R1)').toEqual([]);
+  });
+});
