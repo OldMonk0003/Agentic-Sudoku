@@ -16,8 +16,12 @@ import { descriptors, TOOL_SURFACE_VERSION } from '@/tools/registry';
  * property this one depends on.
  */
 
-/** Grows with each slice. The surface is complete at eleven. */
-const EXPECTED_SO_FAR = [
+/**
+ * Feature 002's surface, complete at eleven. Feature 003 adds five more but must
+ * REMOVE none: 002/FR-010 makes a rename or removal a MAJOR break, so this list
+ * is frozen and only ever appended to.
+ */
+const SURFACE_002 = [
   'get_board_state', 'check_for_conflicts',
   'highlight_pattern_cells', 'show_pattern_hint_toast', 'clear_visual_annotations',
   'fill_cell',
@@ -26,6 +30,19 @@ const EXPECTED_SO_FAR = [
   'playback_deduction_sequence',
   'load_technique_practice',
 ];
+
+/**
+ * Feature 003. GROWS WITH EACH SLICE, exactly as 002's list did -- each slice
+ * ends in a deployable site, so the expected surface is whatever has actually
+ * shipped, not what is planned. Complete at sixteen.
+ */
+const SURFACE_003: readonly string[] = [
+  // US1  'show_coordinate_ruler', 'hide_coordinate_ruler',
+  // US3  'switch_difficulty',
+  // US4  'pause_timer', 'resume_timer',
+];
+
+const EXPECTED_SO_FAR = [...SURFACE_002, ...SURFACE_003];
 
 describe('the WebMCP tool surface, enumerated with no DOM', () => {
   it('has no DOM', () => {
@@ -39,6 +56,49 @@ describe('the WebMCP tool surface, enumerated with no DOM', () => {
 
   it('carries a surface version', () => {
     expect(TOOL_SURFACE_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  /*
+    002/FR-010: renaming a tool, removing one, or narrowing an existing schema is
+    a BREAKING change requiring a MAJOR bump. Feature 003 only ADDS, so the
+    version moves 1.0.0 -> 1.1.0 and every one of 002's eleven tools must still
+    be there, still callable, still accepting what it accepted before.
+  */
+  it('records feature 003 as an additive minor bump (002/FR-010)', () => {
+    expect(TOOL_SURFACE_VERSION).toBe('1.1.0');
+  });
+
+  it('still carries every tool feature 002 registered', () => {
+    const names = descriptors.map((d) => d.name);
+    for (const name of SURFACE_002) {
+      expect(names, `${name} was removed or renamed -- that is a MAJOR break`).toContain(name);
+    }
+  });
+
+  it('has not narrowed any input schema inherited from feature 002', () => {
+    // A narrowed schema rejects input an agent written against 1.0.0 sends.
+    // Every 002 tool still takes an object, still rejects unknown arguments, and
+    // still requires exactly what it required -- never more.
+    const REQUIRED_002: Readonly<Record<string, readonly string[]>> = {
+      get_board_state: [],
+      check_for_conflicts: [],
+      clear_visual_annotations: ['explanation'],
+      fill_cell: ['row', 'col', 'digit', 'explanation'],
+      show_pattern_hint_toast: ['explanation'],
+      highlight_pattern_cells: ['explanation'],
+      draw_constraint_beams: ['beams', 'explanation'],
+      update_pencil_marks: ['cells', 'explanation'],
+      auto_fill_all_pencil_marks: ['explanation'],
+      playback_deduction_sequence: ['steps', 'explanation'],
+      load_technique_practice: ['technique', 'explanation'],
+    };
+
+    for (const [name, required] of Object.entries(REQUIRED_002)) {
+      const descriptor = descriptors.find((d) => d.name === name);
+      expect(descriptor, `${name} is missing`).toBeDefined();
+      const actual = [...(descriptor!.inputSchema.required ?? [])].sort();
+      expect(actual, `${name} required arguments changed`).toEqual([...required].sort());
+    }
   });
 
   it('gives every tool a unique name the standard accepts', () => {
