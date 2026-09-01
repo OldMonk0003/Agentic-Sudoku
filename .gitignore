@@ -31,3 +31,12 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+
+# Local agent tooling. The Spec Kit slash commands are reinstalled by
+# `specify init`, so they are per-checkout tooling rather than project content.
+# Deliberately NOT listing specs/ or tests/ here: both are tracked, and an
+# ignore entry over a tracked directory silently drops any NEW file added to it.
+.claude/
+
+# Vercel CLI project linkage (created by `vercel link` / `vercel deploy`)
+.vercel/
