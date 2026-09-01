@@ -93,3 +93,17 @@ export function frontmatter(): Record<string, string> | null {
 export function skillBody(): string {
   return readSkillMd().replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 }
+
+/**
+ * The one line that says where the board is.
+ *
+ * DERIVED, never hard-coded in a test. The address moved once already
+ * (localhost -> the deployed site), and a test carrying its own copy of it
+ * would be a second place to update -- the very drift the single-address rule
+ * exists to prevent. Reading it from the skill means the tests keep working
+ * across the next move too.
+ */
+export function siteAddress(): string | null {
+  const match = /^Site address:\s*(\S+)\s*$/m.exec(readSkillMd());
+  return match ? match[1]! : null;
+}

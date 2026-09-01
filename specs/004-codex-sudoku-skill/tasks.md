@@ -436,8 +436,10 @@ who already has the files.
 
 ### R5 — does the built-in browser load `http://localhost:3000`? (T001, T042)
 
-- **Answer**: _not yet run_
-- **Site tools visible in the address bar**: _not yet run_
+- **Answer**: **Moot — the site is deployed.** `https://agentic-sudoku.vercel.app` is live over
+  HTTPS, which is a stronger secure context than localhost, so the undocumented localhost question no
+  longer gates the feature. Verify Site tools against the deployed origin instead.
+- **Site tools visible in the address bar**: _not yet run_ — check against the deployed URL
 - **If no**: model checked (Sol/Terra, not Luna)? permission enabled? → otherwise deploy to Vercel and
   repoint the single address line
 

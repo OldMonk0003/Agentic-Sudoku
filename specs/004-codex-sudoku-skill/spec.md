@@ -224,13 +224,13 @@ asking a question.
 
 - **FR-006**: Invoking the skill MUST open the Agentic Sudoku site in the agent host's own in-app
   browser.
-- **FR-007**: The skill MUST open the site at **`http://localhost:3000`** — the address the
-  repository's own static export is served from — until the site is deployed, at which point that
-  address becomes the deployed one.
+- **FR-007**: The skill MUST open the site at its deployed address,
+  **`https://agentic-sudoku.vercel.app`**. *(Was `http://localhost:3000` until the site was deployed
+  on 2026-09-01; the anticipated one-line move, made exactly as FR-007a designed for.)*
 - **FR-007a**: The address MUST appear in **exactly one place** in the skill, so moving from the local
   address to the deployed one is a single edit that cannot leave a stale copy behind.
-- **FR-007b**: The README MUST state that the skill points at a local address today and what has to
-  change when the site is deployed, so a newcomer is not left wondering why nothing opens.
+- **FR-007b**: The README MUST state where the address lives, so moving the board stays a one-line
+  edit and no reader has to guess which address is authoritative.
 - **FR-008**: The skill MUST reuse a session's existing board when the site is already open, rather
   than opening a duplicate or discarding an in-progress puzzle.
 - **FR-009**: When the site cannot be opened, the skill MUST report that plainly, MUST say what would

@@ -5,6 +5,9 @@ through the [WebMCP](https://webmachinelearning.github.io/webmcp/) browser stand
 that speaks the standard can read the board, point at things, and place digits — without a private
 API, an MCP server, or any prior knowledge of this site.
 
+**Live at [agentic-sudoku.vercel.app](https://agentic-sudoku.vercel.app)** — play it yourself, or
+point an agent at it.
+
 Everything runs in the browser. No server, no database, no network request after load.
 
 The agent is a **tutor, not an autosolver**: every change it makes to the board must arrive with a
@@ -12,6 +15,7 @@ one-or-two-line explanation, shown to the learner and undoable with their own Un
 
 | | |
 |---|---|
+| **Live site** | [agentic-sudoku.vercel.app](https://agentic-sudoku.vercel.app) |
 | **WebMCP tools** | 16, surface version `1.1.0` |
 | **Tool implementations** | [`src/tools/tools/`](src/tools/tools/) — one file per tool |
 | **Registration** | [`src/tools/registry.ts`](src/tools/registry.ts) — the only module that touches `document` |
@@ -21,29 +25,46 @@ one-or-two-line explanation, shown to the learner and undoable with their own Un
 
 ## Play with an agent in Codex
 
-Codex's built-in browser supports WebMCP. The bundled **Agentic Sudoku** skill points it at the
-board and constrains it to work only through the published tools.
+Codex's built-in browser supports WebMCP. The bundled **Agentic Sudoku** skill opens the live board
+and constrains the agent to work only through the tools that board publishes.
 
-**Prerequisites** — each of these will silently stop it working:
+**You do not need to run anything locally** — the skill points at the deployed site.
 
-- ChatGPT desktop app, latest version
-- Model set to **GPT-5.6 Sol or Terra** — **WebMCP is disabled on Luna**
+### 1. Check your Codex setup
+
+Each of these will stop it working, and none of them produce a useful error:
+
+- ChatGPT desktop app, latest version, with the built-in browser
+- Model set to **GPT-5.6 Sol or Terra** — **WebMCP is disabled on Luna**, so the board opens and
+  then nothing works
 - Not an Enterprise or Edu workspace
 - Site tools enabled under Settings → Browser → Permissions
 
-**Serve the board**, and leave it running:
+### 2. Install the skill
 
-```bash
-npm run build && npm start
-```
-
-**Install the skill.** Create the directory first — it doesn't exist until you've installed a skill:
+Get the skill directory — either clone this repository, or copy
+[`.agents/skills/agentic-sudoku/`](.agents/skills/agentic-sudoku/) (two text files, no scripts).
+Then put it where Codex looks. **Create that directory first**: it does not exist until you have
+installed a skill, and `cp -R` into a missing path fails with a confusing cascade rather than
+creating it.
 
 ```bash
 mkdir -p ~/.agents/skills && cp -R .agents/skills/agentic-sudoku ~/.agents/skills/
 ```
 
-Restart Codex, then invoke it:
+Symlink instead if you have the repo and want your install to track it:
+
+```bash
+mkdir -p ~/.agents/skills && ln -s "$PWD/.agents/skills/agentic-sudoku" ~/.agents/skills/agentic-sudoku
+```
+
+Confirm it landed, then restart Codex:
+
+```bash
+ls ~/.agents/skills/agentic-sudoku/SKILL.md
+```
+
+### 3. Run it
 
 ```text
 $agentic-sudoku
@@ -53,16 +74,32 @@ Use the explicit `$` form — it works even when implicit skill listing doesn't 
 defect](https://github.com/openai/codex/issues/16012)). Codex also scans `.agents/skills` inside a
 repository, so working in this project may give you the skill for free.
 
+### 4. What to try
+
+The board opens and the agent reports the tools it found. Then:
+
+| Ask | What should happen |
+|---|---|
+| *"What should I do next?"* | It reads the board, names a move, and explains why — from the tool descriptions alone |
+| *"Put a 4 in row 2, column 7"* | The digit appears marked as the agent's, with its reason on screen, undoable with your own Undo |
+| *"Number the grid"* | Row and column guides appear, so you can name a cell without counting |
+| *"Give me a harder one"* | It asks you to confirm before replacing your board |
+| *"Erase that cell"* | A plain refusal — there is no erase tool; that one is yours |
+
+Park your selection on a cell and then ask it to fill a *different* one: your selection must not
+move, and your next keypress must land where you left it.
+
 The board opens and the agent reports the tools it found. **The skill contains no list of those
 tools and no Sudoku guidance** — it reads the surface from the live page every time, because a copy
 would drift from the site and would let a session succeed that the site's own tool descriptions
 couldn't have carried. `tests/unit/skill.no-tool-copy.test.ts` enforces that against the live
 registry.
 
-> **Two current limits.** The skill opens the address on the single `Site address:` line of its
-> `SKILL.md`, which today is local — so it needs this project running on your machine. And this
-> repository has no remote, so there's nowhere for someone without it to fetch the skill from. Both
-> close together: publish the repo, deploy the site, change that one line.
+> **Where the address lives.** The skill opens whatever is on the single `Site address:` line near
+> the top of [`SKILL.md`](.agents/skills/agentic-sudoku/SKILL.md) — one line, one place, so moving
+> the board is a one-line edit. Repoint it at a local build if you want to drive one.
+> `tests/unit/skill.address.test.ts` reads that line as canonical and fails if anything else names a
+> different address, so the skill and this README cannot drift apart.
 
 ---
 

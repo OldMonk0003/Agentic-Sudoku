@@ -8,7 +8,7 @@ description: Play Agentic Sudoku with a human. Use when they want to play, pract
 Agentic Sudoku is a Sudoku board that publishes its own tools to the page, so you can play
 alongside the person instead of clicking things for them.
 
-Site address: http://localhost:3000
+Site address: https://agentic-sudoku.vercel.app
 
 Follow the four instructions below, in order. They are the whole skill.
 

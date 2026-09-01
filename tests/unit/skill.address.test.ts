@@ -1,59 +1,90 @@
 import { describe, it, expect } from 'vitest';
-import { readReadme, skillText } from '../support/skillFiles';
+import { readReadme, siteAddress, skillText } from '../support/skillFiles';
 
 /**
- * The site address exists in exactly ONE place (004/FR-007a, SC-013).
+ * The site address has ONE source of truth (004/FR-007a, SC-013).
  *
- * WHY THIS TEST EXISTS AT ALL. The address is `http://localhost:3000` today and
- * becomes a deployed one when the site reaches Vercel -- the author said so, so
- * **the edit is known in advance**. A change you know is coming has exactly one
- * failure mode: a second copy somewhere that nobody remembers to update, left
- * pointing at a dead address.
+ * The rule was originally "the address appears exactly once, and nowhere else"
+ * -- written while the board was only on localhost and a deployed address was a
+ * known, pending change. That change has now happened, which is the moment such
+ * a rule either proves its worth or turns out to have been the wrong shape.
  *
- * So the rule is not "document the address well". It is "there is one of it",
- * and that is mechanically checkable. The README therefore says WHERE the
- * address lives rather than repeating its value (FR-007b) -- which is why the
- * second test below asserts the README does not contain it.
+ * It was slightly the wrong shape. What matters is not that the address appears
+ * once in the world, but that there is never MORE THAN ONE ANSWER to "where is
+ * the board?". A README that links to the live site is ordinary and useful; a
+ * README that links to a *different* address than the skill opens is a bug that
+ * would take a confused person to find.
+ *
+ * So the rule is now NO DIVERGENCE rather than NO DUPLICATION:
+ *
+ *   - the skill names the address exactly once, and that occurrence is canonical
+ *   - anything else that names a board address must name that same one
+ *
+ * The canonical value is READ FROM THE SKILL rather than written here. A test
+ * with its own copy of the address would be exactly the second source of truth
+ * it exists to forbid -- and would need editing on the next move, which is how
+ * these rules quietly rot.
  */
-
-const ADDRESS = 'http://localhost:3000';
 
 /** Every occurrence, not merely the first -- the point is the count. */
 function occurrences(haystack: string, needle: string): number {
   return haystack.split(needle).length - 1;
 }
 
-describe('the site address lives in exactly one place', () => {
-  it('appears exactly once across the whole skill package', () => {
-    expect(occurrences(skillText(), ADDRESS)).toBe(1);
+/** Anything that looks like it might be where the board lives. */
+function boardAddressesIn(text: string): readonly string[] {
+  const urls = text.match(/https?:\/\/[^\s)"'`,<>\]]+/g) ?? [];
+  return urls
+    .map((url) => url.replace(/[.,]$/, ''))
+    .filter((url) => /localhost|127\.0\.0\.1|vercel\.app/.test(url));
+}
+
+describe('the site address has one source of truth', () => {
+  it('is declared on exactly one line of the skill', () => {
+    const address = siteAddress();
+    expect(address, 'SKILL.md must carry a "Site address:" line').not.toBeNull();
+    expect(occurrences(skillText(), address!)).toBe(1);
   });
 
-  it('does not appear in the README at all', () => {
-    // Two copies is the drift this whole test file exists to prevent, and the
-    // README is the obvious place a second one would appear. It points at the
-    // line to change instead of reproducing its value.
-    expect(occurrences(readReadme(), ADDRESS)).toBe(0);
+  it('is served from a secure context, or WebMCP will not exist there', () => {
+    // `document.modelContext` is [SecureContext]-gated. https qualifies and so
+    // does localhost; a plain-http remote address would leave the skill opening
+    // a board with no tools on it, which is a silent and very confusing failure.
+    const address = siteAddress()!;
+    const secure = address.startsWith('https://')
+      || address.startsWith('http://localhost')
+      || address.startsWith('http://127.0.0.1');
+    expect(secure, `"${address}" is not a secure context, so the tool surface would not be published there`).toBe(true);
   });
 
-  it('is not accompanied by a fallback or alternative address', () => {
-    // A skill carrying both a local and a deployed address would satisfy "one
-    // copy of this string" while reintroducing exactly the ambiguity the rule
-    // is about. Two addresses is two addresses.
-    const text = skillText();
-    const urls = text.match(/https?:\/\/[^\s)"'`,]+/g) ?? [];
-    const siteUrls = urls.filter((url) => !url.includes('learn.chatgpt.com') && !url.includes('github.com'));
-    expect(siteUrls).toEqual([ADDRESS]);
+  it('is the only board address the skill names', () => {
+    // Two addresses would satisfy "one copy of this string" while reintroducing
+    // precisely the ambiguity the rule is about.
+    expect(boardAddressesIn(skillText())).toEqual([siteAddress()!]);
+  });
+
+  it('is the only board address the README names', () => {
+    // The README may link to the live site -- that is useful and expected. What
+    // it may not do is name a DIFFERENT one, which is how a stale localhost
+    // survives a deployment and sends someone to a board that is not running.
+    const address = siteAddress()!;
+    for (const found of boardAddressesIn(readReadme())) {
+      expect(
+        found.replace(/\/$/, ''),
+        `README names "${found}" but the skill opens "${address}" -- there must be one answer to where the board is`,
+      ).toBe(address.replace(/\/$/, ''));
+    }
   });
 });
 
 /**
- * The README carries what a newcomer needs (004/FR-030 -- FR-034).
+ * The README can get a newcomer from nothing to a working skill
+ * (004/FR-030 -- FR-034).
  *
- * These are assertions about DOCUMENTATION, which is unusual, and they are here
- * because the requirements are specific enough to check: the install path is the
- * one Codex actually scans, the invocation form is the one that works even when
- * implicit listing does not, and the prerequisites that will silently break the
- * skill are named rather than left to be discovered by failure.
+ * Assertions about documentation, which is unusual, and they are here because
+ * these particular facts fail SILENTLY when wrong: a skill installed to the
+ * wrong path simply never triggers, and the wrong model publishes no tools at
+ * all. Neither produces an error a reader could act on.
  */
 describe('the README can get a newcomer from nothing to a working skill', () => {
   it('names the install location Codex actually scans', () => {
@@ -65,9 +96,9 @@ describe('the README can get a newcomer from nothing to a working skill', () => 
   });
 
   it('documents the explicit invocation form', () => {
-    // Explicit `$agentic-sudoku` works whether or not the skill made it into the
-    // implicit listing -- which matters, because repo-local discovery has a known
-    // defect (openai/codex#16012, research.md R4).
+    // `$agentic-sudoku` works whether or not the skill made it into the implicit
+    // listing -- which matters, because repo-local discovery has a known defect
+    // (openai/codex#16012, research.md R4).
     expect(readReadme()).toContain('$agentic-sudoku');
   });
 
