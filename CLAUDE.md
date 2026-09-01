@@ -17,6 +17,7 @@ standard. 100% client-side: no server, no database, no network request after loa
 | [001 — Core play experience](specs/001-sudoku-play-experience/) | **Complete.** 124/124 tasks, 241 unit + 90 browser tests |
 | [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 130/132 tasks, 851 unit + 204 browser tests, 11 tools |
 | [003 — Agent board controls](specs/003-agent-board-controls/) | **Complete.** 1183 unit + 263 browser tests, **16 tools** |
+| [004 — Codex skill](specs/004-codex-sudoku-skill/) | **Built, unverified.** A Codex skill at `.agents/skills/agentic-sudoku/`; 1206 unit tests. The live run that closes SC-001 has not happened |
 
 ## Where things stand (read this first)
 

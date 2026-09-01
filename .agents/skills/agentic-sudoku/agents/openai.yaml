@@ -1,0 +1,16 @@
+# Optional host metadata for the Agentic Sudoku skill.
+#
+# The frontmatter `name` has to be a slug, because it is the invocation token
+# (`$agentic-sudoku`). The human-readable name the skill is actually called
+# lives here.
+
+interface:
+  display_name: "Agentic Sudoku"
+  short_description: "Open the Agentic Sudoku board and play through the tools the page publishes."
+
+policy:
+  # The point of the skill is that one call is enough, and the description is
+  # narrow enough to gate it. Set this to false if an unprompted browser opening
+  # ever becomes a nuisance -- explicit `$agentic-sudoku` invocation keeps
+  # working either way.
+  allow_implicit_invocation: true
