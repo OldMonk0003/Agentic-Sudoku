@@ -16,7 +16,7 @@ standard. 100% client-side: no server, no database, no network request after loa
 |---|---|
 | [001 — Core play experience](specs/001-sudoku-play-experience/) | **Complete.** 124/124 tasks, 241 unit + 90 browser tests |
 | [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 130/132 tasks, 851 unit + 204 browser tests, 11 tools |
-| [003 — Agent board controls](specs/003-agent-board-controls/) | **Complete.** 1183 unit + 262 browser tests, **16 tools** |
+| [003 — Agent board controls](specs/003-agent-board-controls/) | **Complete.** 1183 unit + 263 browser tests, **16 tools** |
 
 ## Where things stand (read this first)
 
@@ -26,15 +26,18 @@ Check it rather than trusting it — this section is the thing most likely to be
 git log --oneline -3 && git rev-parse --abbrev-ref HEAD && cat .specify/feature.json
 ```
 
-As of 2026-08-31:
+As of 2026-09-01:
 
 - **Features 002 and 003 are both on the branch `002-webmcp-agent-tutor`, and `main` is still at
-  `a5ad72f`.** Neither has been merged. Decide deliberately where a new feature branches from.
+  `a5ad72f`.** Neither has been merged, and **there is no git remote configured**. Decide
+  deliberately where a new feature branches from.
 - **002's T131 is now closed by example**: 003 was committed tests-first, one commit per phase, so
   the ordering Principle V wants is visible in history. Do the same.
 - **002's T126 remains open, and 003 made it bigger**: SC-001 is still unverified against a live
   agent, and the untested surface has grown from 11 tools to 16.
-- The working tree was clean, the full suite green: 1183 unit, 262 browser.
+- **`LICENSE` (MIT) is at the repo root** as of `08b09d8`. GitHub reads it from the *default* branch
+  to fill the repo's About sidebar, so it will not show there until this branch reaches `main`.
+- The working tree was clean, the full suite green: **1183 unit, 263 browser**.
 
 ## Commands
 
@@ -46,7 +49,13 @@ npm run test:perf    # budgets, including agent tool-call latency
 npm run lint         # includes layer-boundary enforcement
 npm run typecheck
 npm run review:agent # headed agent review harness — see 002/quickstart.md
+npm run review:003   # screenshots: ruler + spotlight, 360px and desktop, colour and greyscale
 ```
+
+**The review harnesses run under `playwright.review.config.ts`, not the main config.** The main one
+carries a `testIgnore` for `tests/review/**` so they never run in CI — and that applies even when a
+file is named explicitly on the command line, which is why `npm run review:agent` silently matched
+zero tests from feature 002 until 003 noticed. Use the npm scripts.
 
 Vitest runs **three projects**: `node` (no DOM at all), `component` (jsdom), and `contract`
 (jsdom, `tests/contract/**` — the WebMCP tool contracts). Target one with
@@ -219,12 +228,18 @@ it is what caught the hatch.
   in `tests/integration/offline.spec.ts`. Needs a scope decision.
 - **The 250 KB bundle budget is deferred** by author decision, recorded in
   [plan.md § Complexity Tracking](specs/001-sudoku-play-experience/plan.md). CI reports
-  the number (currently ~189 KB gzipped) but nothing gates on it.
+  the number (**206.7 KB gzipped**, measured 2026-08-31) but nothing gates on it.
 - **Drills exist for three of five techniques.** `naked-single` and `x-wing` have none: measured
   against `requiresTechnique`, no qualifying puzzle appeared in hundreds of thousands of candidates.
   FR-054 handles it by design, but **the spec's own worked example is an X-Wing drill**, so this
   wants a scope decision — accept three, or add a harder technique module so X-Wing-exact puzzles
   become findable.
+- **The coordinate ruler's colour is a decision awaiting the author** (003/T096). The supplied
+  screenshot showed the row/column numbers in saturated red; the implementation uses
+  `--color-ink-note`, because red would borrow the board's conflict vocabulary and 001/FR-052
+  mandates a low-saturation palette. Everything else in that screenshot is reproduced as shown. If
+  the red was load-bearing it is a **palette amendment** in `app/globals.css` with a contrast
+  re-run, not a component change.
 - **SC-001 has not been verified against a live agent, and feature 003 grew the untested surface from eleven tools to sixteen.** Nothing in this environment implements
   `document.modelContext`, so the surface has only ever been driven through a spec-conformant fake.
   Point a real agent at it before believing the "no site-specific instructions" claim.
