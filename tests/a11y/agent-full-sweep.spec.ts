@@ -51,26 +51,6 @@ for (const [label, width, height] of [['desktop', 1280, 900], ['360px', 360, 780
   });
 }
 
-test('axe is clean with a confirmation waiting', async ({ page }) => {
-  await openWithAgent(page);
-  const index = Number(
-    await page.locator('[role="gridcell"][data-origin="empty"]').first().getAttribute('data-index'),
-  );
-  await page.locator(`[data-index="${index}"]`).click();
-  await page.keyboard.press('5');
-
-  const running = callTool(page, 'load_technique_practice', {
-    technique: 'naked-pair',
-    explanation: EXPLANATION,
-  });
-  await expect(page.getByTestId('confirmation-banner')).toBeVisible();
-
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
-
-  await page.getByRole('button', { name: 'Keep my board' }).click();
-  await running;
-});
 
 test('axe is clean with the agent disconnected', async ({ page }) => {
   await openWithAgent(page);

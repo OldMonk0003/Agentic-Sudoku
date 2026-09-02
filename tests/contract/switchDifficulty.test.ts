@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { store } from '@/state/store';
 import { newPuzzle, enterDigitAt, pause, tick } from '@/state/actions';
-import { agentStore, clearConfirmation, askConfirmation } from '@/state/agentSession';
-import { createSwitchDifficultyTool } from '@/tools/tools/switchDifficulty';
+import { agentStore, clearAnnotations } from '@/state/agentSession';
+import { createSwitchDifficultyTool, switchDifficulty } from '@/tools/tools/switchDifficulty';
 import { hasUniqueSolution } from '@/engine/uniqueness';
 import { toCoord } from '@/engine/grid';
 
@@ -15,18 +15,18 @@ import { toCoord } from '@/engine/grid';
  * real minute or need a real Worker.
  *
  * THE SHAPE WORTH READING TWICE: a DECLINE IS `ok: true`. The learner keeping
- * their board is an ordinary outcome, not a fault, and reporting it as an error
- * would push an agent to retry something the learner just refused.
+ * FEATURE 005 REPEALED THE CONFIRMATION this file was largely written around.
+ * The gate block below is inverted rather than removed: what mattered then was
+ * that the learner was asked, and what matters now is that they are NOT, and
+ * that the call returns without waiting on anyone. Everything else here --
+ * schema, unknown levels, status, generation, derived difficulty -- is unchanged
+ * and still asserted.
  */
 
 const EXPLANATION = 'You have cleared three easy boards quickly, so a harder one would suit you now.';
 
-/** Accepts immediately, so the confirmation path is exercised without waiting. */
-const accepting = { wait: async () => 'accepted' as const };
-const declining = { wait: async () => 'declined' as const };
-
 /** Generation that succeeds by loading a real puzzle through the game store. */
-const generator = {
+const succeeds = {
   generate: async (difficulty: 'easy' | 'medium' | 'hard') => {
     store.dispatch(newPuzzle(difficulty, 4242));
     return { ok: true as const };
@@ -35,12 +35,11 @@ const generator = {
 
 const failingGenerator = { generate: async () => ({ ok: false as const }) };
 
-const tool = (opts: Partial<Parameters<typeof createSwitchDifficultyTool>[0]> = {}) =>
-  createSwitchDifficultyTool({ waiter: accepting, generator, ...opts });
+const tool = () => createSwitchDifficultyTool({ generator: succeeds });
 
 beforeEach(() => {
   store.dispatch(newPuzzle('easy', 1010));
-  agentStore.dispatch(clearConfirmation());
+  agentStore.dispatch(clearAnnotations());
 });
 
 /** Put something on the board worth losing. */
@@ -99,50 +98,64 @@ describe('switch_difficulty: unknown levels', () => {
   });
 });
 
-describe('switch_difficulty: the confirmation gate', () => {
-  it('loads without asking when the board has no progress (FR-031)', async () => {
-    const result = await tool().execute({ difficulty: 'hard', explanation: EXPLANATION });
+describe('switch_difficulty: no confirmation (005/FR-020)', () => {
+  /*
+    Feature 005 REPEALED the gate this block used to test. It previously raised a
+    prompt whenever the board had progress on it and waited up to sixty seconds
+    for a click (002/FR-053, 003/FR-030).
+
+    The assertions are inverted rather than deleted: what mattered then was that
+    the learner was asked, and what matters now is that they are NOT -- and that
+    the call returns without waiting on anyone.
+  */
+  it('replaces a board WITH progress, immediately and unasked', async () => {
+    const coord = toCoord(store.getState().cells.findIndex((c) => c.value === null));
+    store.dispatch(enterDigitAt(coord, 4, 'player'));
+
+    const tool = createSwitchDifficultyTool({ generator: succeeds });
+    const result = await tool.execute({ difficulty: 'hard', explanation: EXPLANATION });
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data).toMatchObject({ outcome: 'loaded' });
-    // Nothing was ever put on screen.
-    expect(agentStore.getState().confirmation).toBeNull();
   });
 
-  it('asks first when there is progress to lose (FR-030)', async () => {
-    makeProgress();
-    const result = await tool().execute({ difficulty: 'hard', explanation: EXPLANATION });
+  it('replaces a board with NO progress, exactly the same way', async () => {
+    // There is no longer a distinction between the two cases, which is the
+    // simplification the repeal bought.
+    const tool = createSwitchDifficultyTool({ generator: succeeds });
+    const result = await tool.execute({ difficulty: 'hard', explanation: EXPLANATION });
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data).toMatchObject({ outcome: 'loaded' });
   });
 
-  it('reports a decline as an ORDINARY outcome, not an error (FR-030)', async () => {
-    makeProgress();
-    const before = store.getState().puzzle!.puzzleString;
+  it('can no longer return a "declined" outcome at all', async () => {
+    const coord = toCoord(store.getState().cells.findIndex((c) => c.value === null));
+    store.dispatch(enterDigitAt(coord, 4, 'player'));
 
-    const result = await tool({ waiter: declining }).execute({
-      difficulty: 'hard', explanation: EXPLANATION,
-    });
+    const tool = createSwitchDifficultyTool({ generator: succeeds });
+    const result = await tool.execute({ difficulty: 'medium', explanation: EXPLANATION });
 
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data).toMatchObject({ outcome: 'declined', difficulty: 'hard' });
-    // Bit-for-bit unchanged.
-    expect(store.getState().puzzle!.puzzleString).toBe(before);
+    // An agent written against 1.1.0 that handled 'declined' simply never sees
+    // it again -- which is why this stays a MINOR bump (002/FR-010).
+    if (result.ok) expect((result.data as Record<string, unknown>).outcome).not.toBe('declined');
   });
 
-  it('refuses when another confirmation is already waiting', async () => {
-    makeProgress();
-    agentStore.dispatch(askConfirmation({
-      kind: 'drill', subject: 'naked-pair',
-      prompt: 'A drill on naked pairs would cement what you just worked out on your own.',
-      now: Date.now(),
-    }));
+  it('does not promise a confirmation in its description (002/FR-006)', () => {
+    // An agent reads this at runtime. A description that still said "the human
+    // is asked first" would describe behaviour the site no longer has.
+    expect(switchDifficulty.description.toLowerCase()).not.toMatch(/asked to confirm|confirm first|may decline/);
+  });
 
-    const result = await tool().execute({ difficulty: 'hard', explanation: EXPLANATION });
+  it('returns without waiting on a human (005/FR-023)', async () => {
+    const coord = toCoord(store.getState().cells.findIndex((c) => c.value === null));
+    store.dispatch(enterDigitAt(coord, 4, 'player'));
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('confirmation-pending');
+    const tool = createSwitchDifficultyTool({ generator: succeeds });
+    const started = Date.now();
+    await tool.execute({ difficulty: 'medium', explanation: EXPLANATION });
+
+    expect(Date.now() - started).toBeLessThan(1_000);
   });
 });
 
@@ -163,7 +176,7 @@ describe('switch_difficulty: generation', () => {
   it('reports a failed generation and leaves the board alone (FR-036)', async () => {
     const before = store.getState().puzzle!.puzzleString;
 
-    const result = await tool({ generator: failingGenerator }).execute({
+    const result = await createSwitchDifficultyTool({ generator: failingGenerator }).execute({
       difficulty: 'hard', explanation: EXPLANATION,
     });
 

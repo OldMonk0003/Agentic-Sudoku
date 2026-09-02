@@ -45,18 +45,16 @@ test('not one request leaves the page across the entire agent surface', async ({
   });
   await callTool(page, 'clear_visual_annotations', { explanation });
 
-  const drill = callTool(page, 'load_technique_practice', { technique: 'naked-pair', explanation });
-  await page.getByRole('button', { name: 'Load drill' }).click();
-  await drill;
+  await callTool(page, 'load_technique_practice', { technique: 'naked-pair', explanation });
 
   /*
-    `switch_difficulty` last, and ANSWERED rather than awaited blind.
+    `switch_difficulty` and `restart_puzzle` last: they generate a whole new
+    puzzle, which is the most plausible place a network request could ever creep
+    in, so they belong in this sweep more than most.
 
-    It generates a whole new puzzle, which is the most plausible place a network
-    request could ever creep in -- so it belongs in this sweep more than most.
-    But by now the board has progress on it, so it raises a confirmation and
-    waits up to a minute for a human. Awaiting it without answering would hang
-    the test for the tool behaving exactly as FR-030 requires.
+    Feature 005 repealed the confirmation, so neither waits on a human any more
+    and both can simply be awaited -- which is why the answering machinery that
+    used to sit here is gone.
   */
   const switching = callTool(page, 'switch_difficulty', { difficulty: 'medium', explanation });
 

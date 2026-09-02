@@ -34,7 +34,7 @@ const SURFACE_002 = [
 /**
  * Feature 003. GROWS WITH EACH SLICE, exactly as 002's list did -- each slice
  * ends in a deployable site, so the expected surface is whatever has actually
- * shipped, not what is planned. Complete at sixteen.
+ * shipped, not what is planned. Complete at eighteen.
  */
 const SURFACE_003: readonly string[] = [
   'show_coordinate_ruler', 'hide_coordinate_ruler',
@@ -42,7 +42,13 @@ const SURFACE_003: readonly string[] = [
   'pause_timer', 'resume_timer',
 ];
 
-const EXPECTED_SO_FAR = [...SURFACE_002, ...SURFACE_003];
+/**
+ * Feature 005's two. Neither renames nor removes anything, so the surface stays
+ * append-only and the bump stays MINOR.
+ */
+const SURFACE_005: readonly string[] = ['restart_puzzle', 'undo_move'];
+
+const EXPECTED_SO_FAR = [...SURFACE_002, ...SURFACE_003, ...SURFACE_005];
 
 describe('the WebMCP tool surface, enumerated with no DOM', () => {
   it('has no DOM', () => {
@@ -61,11 +67,22 @@ describe('the WebMCP tool surface, enumerated with no DOM', () => {
   /*
     002/FR-010: renaming a tool, removing one, or narrowing an existing schema is
     a BREAKING change requiring a MAJOR bump. Feature 003 only ADDS, so the
-    version moves 1.0.0 -> 1.1.0 and every one of 002's eleven tools must still
-    be there, still callable, still accepting what it accepted before.
+    version moves 1.0.0 -> 1.1.0 -> 1.2.0 and every earlier tool must still be
+    there, still callable, still accepting what it accepted before.
+
+    Feature 005 also REMOVED an error code (`confirmation-pending`). That is not
+    one of the three breaking changes 002/FR-010 names, and an agent that handled
+    it simply never sees it again -- so the bump stays MINOR.
   */
-  it('records feature 003 as an additive minor bump (002/FR-010)', () => {
-    expect(TOOL_SURFACE_VERSION).toBe('1.1.0');
+  it('records features 003 and 005 as additive minor bumps (002/FR-010)', () => {
+    expect(TOOL_SURFACE_VERSION).toBe('1.2.0');
+  });
+
+  it('still carries every tool feature 003 registered', () => {
+    const names = descriptors.map((d) => d.name);
+    for (const name of SURFACE_003) {
+      expect(names, `${name} was removed or renamed -- that is a MAJOR break`).toContain(name);
+    }
   });
 
   it('still carries every tool feature 002 registered', () => {

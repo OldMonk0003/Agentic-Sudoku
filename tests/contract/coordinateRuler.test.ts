@@ -5,6 +5,9 @@ import { preferencesStore, hideRuler } from '@/state/preferences';
 import { showCoordinateRuler } from '@/tools/tools/showCoordinateRuler';
 import { hideCoordinateRuler } from '@/tools/tools/hideCoordinateRuler';
 import { toCoord } from '@/engine/grid';
+// Read the version rather than hard-coding it: a literal here has to be chased
+// down on every MINOR bump, which is exactly what feature 005 tripped over.
+import { TOOL_SURFACE_VERSION } from '@/tools/registry';
 
 /**
  * Contract tests for the two ruler tools (FR-006 to FR-016).
@@ -52,7 +55,7 @@ describe('show_coordinate_ruler', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data).toMatchObject({ outcome: 'shown', already_visible: false });
-      expect(result.surface_version).toBe('1.1.0');
+      expect(result.surface_version).toBe(TOOL_SURFACE_VERSION);
     }
     expect(preferencesStore.getState().rulerVisible).toBe(true);
   });

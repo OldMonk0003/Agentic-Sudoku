@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { store } from '@/state/store';
 import { newPuzzle, enterDigitAt, tick } from '@/state/actions';
 import { agentStore, clearAnnotations } from '@/state/agentSession';
@@ -48,12 +48,43 @@ function fingerprint() {
   });
 }
 
+/*
+  A STAND-IN FOR THE VIEW.
+
+  Board-replacing tools do not generate: `src/tools -> src/ui` is a lint error,
+  so they raise a request on the agent session store and `GameScreen`, which is
+  subscribed, performs it (003/research.md R1). There is no GameScreen here, so
+  without this the request is never served and the tool waits out its full
+  generation timeout.
+
+  Feature 005 is what exposed that. `switch_difficulty` never hit it only because
+  its required `difficulty` argument rejects these inputs before the generator is
+  reached -- an accident of its schema, not a property of the sweep.
+  `restart_puzzle` takes no arguments, so a valid explanation is a valid call and
+  it really runs. Serving the request here makes this environment faithful to the
+  real one, and covers any future generation-bound tool rather than this one.
+*/
+let unsubscribe: (() => void) | null = null;
+
 beforeEach(() => {
   store.dispatch(newPuzzle('easy', 66613));
   const coord = toCoord(store.getState().cells.findIndex((c) => c.value === null));
   store.dispatch(enterDigitAt(coord, 4, 'player'));
   store.dispatch(tick(3000));
   agentStore.dispatch(clearAnnotations());
+
+  let served = agentStore.getState().puzzleRequests;
+  unsubscribe = agentStore.subscribe(() => {
+    const { puzzleRequests, puzzleRequest } = agentStore.getState();
+    if (puzzleRequests === served || !puzzleRequest) return;
+    served = puzzleRequests;
+    store.dispatch(newPuzzle(puzzleRequest.difficulty, Math.floor(Math.random() * 1e9)));
+  });
+});
+
+afterEach(() => {
+  unsubscribe?.();
+  unsubscribe = null;
 });
 
 /*

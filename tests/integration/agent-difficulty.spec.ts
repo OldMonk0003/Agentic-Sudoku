@@ -14,12 +14,6 @@ import { openWithAgent, callTool } from '../support/agentPage';
 
 const EXPLANATION = 'You have cleared three easy boards quickly, so a harder one would suit you now.';
 
-async function makeProgress(page: Page) {
-  const empty = page.locator('[role="gridcell"]:not([data-origin="clue"])').first();
-  await empty.click();
-  await page.keyboard.press('5');
-  await expect(empty).toContainText('5');
-}
 
 async function boardFingerprint(page: Page) {
   return page.evaluate(() =>
@@ -42,55 +36,8 @@ test('an untouched board changes level with no prompt (FR-031)', async ({ page }
   await expect(page.getByLabel('Difficulty')).toHaveValue('hard');
 });
 
-test('the learner is asked first when there is progress to lose (FR-030)', async ({ page }) => {
-  await makeProgress(page);
 
-  const running = callTool(page, 'switch_difficulty', {
-    difficulty: 'hard', explanation: EXPLANATION,
-  });
 
-  const banner = page.getByTestId('confirmation-banner');
-  await expect(banner).toBeVisible();
-  await expect(banner).toContainText(EXPLANATION);
-
-  await banner.getByRole('button', { name: /keep my board/i }).click();
-  const result = await running;
-
-  expect(result.ok).toBe(true);
-  expect(result.data).toMatchObject({ outcome: 'declined' });
-});
-
-test('declining leaves the board bit-for-bit unchanged (SC-006)', async ({ page }) => {
-  await makeProgress(page);
-  const before = await boardFingerprint(page);
-
-  const running = callTool(page, 'switch_difficulty', {
-    difficulty: 'hard', explanation: EXPLANATION,
-  });
-  await page.getByTestId('confirmation-banner').getByRole('button', { name: /keep my board/i }).click();
-  await running;
-
-  expect(await boardFingerprint(page)).toBe(before);
-  await expect(page.getByLabel('Difficulty')).toHaveValue('easy');
-});
-
-test('accepting loads a fresh board with a clean clock and no undo (FR-033)', async ({ page }) => {
-  await makeProgress(page);
-  const before = await boardFingerprint(page);
-
-  const running = callTool(page, 'switch_difficulty', {
-    difficulty: 'hard', explanation: EXPLANATION,
-  });
-  await page.getByTestId('confirmation-banner').getByRole('button', { name: /switch|load|yes/i }).click();
-  const result = await running;
-
-  expect(result.ok).toBe(true);
-  expect(result.data).toMatchObject({ outcome: 'loaded', difficulty: 'hard' });
-
-  expect(await boardFingerprint(page)).not.toBe(before);
-  await expect(page.getByTestId('timer')).toHaveText('00:00');
-  await expect(page.getByRole('button', { name: /undo/i })).toBeDisabled();
-});
 
 test('the learner is never locked out while a puzzle generates (FR-037)', async ({ page }) => {
   const running = callTool(page, 'switch_difficulty', {

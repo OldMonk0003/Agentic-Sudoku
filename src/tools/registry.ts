@@ -15,6 +15,8 @@ import { hideCoordinateRuler } from './tools/hideCoordinateRuler';
 import { switchDifficulty } from './tools/switchDifficulty';
 import { pauseTimer } from './tools/pauseTimer';
 import { resumeTimer } from './tools/resumeTimer';
+import { restartPuzzle } from './tools/restartPuzzle';
+import { undoMove } from './tools/undoMove';
 import { TOOL_SURFACE_VERSION, type ToolDescriptor } from './types';
 
 /**
@@ -44,9 +46,27 @@ export { TOOL_SURFACE_VERSION } from './types';
 /**
  * The public contract. Order is the order an agent sees.
  *
- * SIXTEEN TOOLS at surface version 1.1.0. Feature 002 registered eleven; feature
- * 003 added five, and removed or renamed none -- 002/FR-010 makes any of those a
- * MAJOR break, so this array is append-only in practice.
+ * EIGHTEEN TOOLS at surface version 1.2.0. Feature 002 registered eleven, 003
+ * added five, 005 added two, and none has ever been removed or renamed --
+ * 002/FR-010 makes any of those a MAJOR break, so this array is append-only in
+ * practice.
+ *
+ * Feature 005's additions:
+ *
+ *   restart_puzzle          {} + explanation
+ *     A DIFFERENT grid at the SAME difficulty. Takes no difficulty argument on
+ *     purpose: the level is read from the board, so the level after is the level
+ *     before. Replaces the board with no confirmation -- 005 repealed the prompt
+ *     for every agent-initiated replacement, so the explanation is the learner's
+ *     only account of why their board changed.
+ *       -> { outcome: 'restarted', difficulty: 'medium', clue_count: 28, ... }
+ *
+ *   undo_move               {} + explanation
+ *     Takes back the last change, whoever made it. PERMITTED on a complete board
+ *     (the learner's button works there and returns it to play); REJECTED while
+ *     paused -- and that guard lives in the tool, because `undoLast` has no
+ *     status check and `defineWriteTool` deliberately does not gate on status.
+ *       -> { outcome: 'undone', undone_origin: 'player', undo_depth: 3, ... }
  *
  * Feature 003's additions, with an example invocation each:
  *
@@ -100,6 +120,9 @@ export const descriptors: readonly ToolDescriptor[] = [
   switchDifficulty,
   pauseTimer,
   resumeTimer,
+  // Feature 005.
+  restartPuzzle,
+  undoMove,
 ];
 
 export interface RegistrationHandle {

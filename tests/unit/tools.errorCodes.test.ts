@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { TOOL_SURFACE_VERSION } from '@/tools/registry';
 import { failure, type ErrorCode } from '@/tools/types';
 
 /**
@@ -36,7 +37,6 @@ const CODES_002: readonly ErrorCode[] = [
 /** Feature 003's additions (data-model.md section 6). */
 const CODES_003: readonly ErrorCode[] = [
   'unknown-difficulty',
-  'confirmation-pending',
   'generation-failed',
 ];
 
@@ -64,7 +64,7 @@ describe('the tool error vocabulary', () => {
 
   it('carries the surface version on every failure, so a stale agent finds out', () => {
     const result = failure('some_tool', 'generation-failed', 'no puzzle could be produced');
-    expect(result.surface_version).toBe('1.1.0');
+    expect(result.surface_version).toBe(TOOL_SURFACE_VERSION);
   });
 
   it('preserves optional details without inventing an empty object', () => {

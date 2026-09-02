@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Board } from './Board';
 import { Keypad } from './Keypad';
 import { DifficultySelect } from './DifficultySelect';
+import { RestartButton } from './RestartButton';
 import { ModeToggle } from './ModeToggle';
 import { RulerToggle } from './RulerToggle';
 import { Timer } from './Timer';
@@ -13,7 +14,6 @@ import { AgentBadge } from './AgentBadge';
 import { ExplanationQueue } from './ExplanationQueue';
 import { AgentToast } from './AgentToast';
 import { PlaybackIndicator } from './PlaybackIndicator';
-import { ConfirmationBanner } from './ConfirmationBanner';
 import { agentStore } from './useAgentStore';
 import { expire, setReducedMotion } from '@/state/agentSession';
 import { resume, loadSession } from '@/state/actions';
@@ -129,6 +129,10 @@ export function GameScreen() {
         <h1 className="text-lg font-medium tracking-[0.2em] text-ink-clue uppercase">Agentic Sudoku</h1>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <DifficultySelect />
+          {/* Beside the difficulty control, NOT beside Erase and Undo. It
+              replaces the board without asking, and a replaced board cannot be
+              recovered (005/research.md R7). */}
+          <RestartButton />
           <ModeToggle />
           {/* The learner's own control. Present with no agent, because the
               ruler is a readability aid, not an agent affordance (003/FR-013). */}
@@ -144,7 +148,6 @@ export function GameScreen() {
         never block the board (002/FR-018, FR-022, SC-007). They sit ABOVE the
         board rather than over it, so nothing the agent says can obscure play.
       */}
-      <ConfirmationBanner />
       <PlaybackIndicator />
       <AgentToast />
       <ExplanationQueue />

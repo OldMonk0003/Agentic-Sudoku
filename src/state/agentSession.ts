@@ -3,7 +3,6 @@ import {
   type Annotation, type AnnotationRole, type BeamAnnotation,
 } from './annotations';
 import { onScreen, toastOrNull, type Explanation, type Toast } from './explanations';
-import { pending, type Confirmation } from './confirmation';
 import type { Difficulty } from './types';
 import { liveSpotlight, type Spotlight } from './spotlight';
 import { AGENT_ACTION_TYPES, type AgentAction } from './agentActions';
@@ -54,8 +53,6 @@ export type {
   Annotation, AnnotationInput, AnnotationRole, BeamAnnotation, CellAnnotation,
 } from './annotations';
 export type { Explanation, Toast } from './explanations';
-export type { Confirmation, ConfirmationKind } from './confirmation';
-export { CONFIRMATION_TTL_MS, canAsk } from './confirmation';
 export { ANNOTATION_TTL_MS } from './annotations';
 export { SPOTLIGHT_TTL_MS, SPOTLIGHT_MAX_CELLS, spotlitIndices, spotlightFocusIndex, spotlightEdgesFor } from './spotlight';
 export type { Spotlight, SpotlightEdges } from './spotlight';
@@ -73,7 +70,6 @@ export interface AgentSession {
   readonly learnerActivity: number;
   readonly reducedMotion: boolean;
   readonly playback: PlaybackState | null;
-  readonly confirmation: Confirmation | null;
   /**
    * Where the agent last changed something (003/FR-018). A SLOT, so FR-022's
    * "at most one spotlight" is structural -- a later write overwrites it, and
@@ -117,7 +113,6 @@ export function emptyAgentSession(): AgentSession {
     learnerActivity: 0,
     reducedMotion: false,
     playback: null,
-    confirmation: null,
     spotlight: null,
     puzzleRequest: null,
     puzzleRequests: 0,
@@ -144,10 +139,6 @@ export const annotatedRoles = (
 
 export const visibleBeams = (session: AgentSession, now: number): readonly BeamAnnotation[] =>
   beamsOnly(visibleAnnotations(session, now));
-
-/** The prompt on screen: unanswered, and not yet timed out. */
-export const visibleConfirmation = (session: AgentSession, now: number): Confirmation | null =>
-  pending(session.confirmation, now);
 
 /** The spotlight still on screen: raised, and not yet expired (003/FR-023). */
 export const visibleSpotlight = (session: AgentSession, now: number): Spotlight | null =>

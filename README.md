@@ -16,7 +16,7 @@ one-or-two-line explanation, shown to the learner and undoable with their own Un
 | | |
 |---|---|
 | **Live site** | [agentic-sudoku.vercel.app](https://agentic-sudoku.vercel.app) |
-| **WebMCP tools** | 16, surface version `1.1.0` |
+| **WebMCP tools** | 18, surface version `1.2.0` |
 | **Tool implementations** | [`src/tools/tools/`](src/tools/tools/) — one file per tool |
 | **Registration** | [`src/tools/registry.ts`](src/tools/registry.ts) — the only module that touches `document` |
 | **Codex skill** | [`.agents/skills/agentic-sudoku/`](.agents/skills/agentic-sudoku/) |
@@ -83,13 +83,13 @@ The board opens and the agent reports the tools it found. Then:
 | *"What should I do next?"* | It reads the board, names a move, and explains why — from the tool descriptions alone |
 | *"Put a 4 in row 2, column 7"* | The digit appears marked as the agent's, with its reason on screen, undoable with your own Undo |
 | *"Number the grid"* | Row and column guides appear, so you can name a cell without counting |
-| *"Give me a harder one"* | It asks you to confirm before replacing your board |
+| *"Give me a harder one"* | Your board is replaced immediately — it does **not** ask first |
 | *"Erase that cell"* | A plain refusal — there is no erase tool; that one is yours |
 
 Park your selection on a cell and then ask it to fill a *different* one: your selection must not
 move, and your next keypress must land where you left it.
 
-The board opens and the agent reports the tools it found. **The skill contains no list of those
+**The skill contains no list of those
 tools and no Sudoku guidance** — it reads the surface from the live page every time, because a copy
 would drift from the site and would let a session succeed that the site's own tool descriptions
 couldn't have carried. `tests/unit/skill.no-tool-copy.test.ts` enforces that against the live
@@ -133,13 +133,14 @@ silently.
 | `fill_cell` | Place one digit in one empty, non-clue cell |
 | `update_pencil_marks` | Set specific cells' candidates to exactly the digits listed |
 | `auto_fill_all_pencil_marks` | Pencil every empty cell with the digits still legal there |
+| `undo_move` | Take back the last change, whoever made it — exactly as the learner's Undo does |
 
 ### Guided flows
 
 | Tool | Purpose |
 |---|---|
 | `playback_deduction_sequence` | Play a walkthrough — steps in order, each explained as it happens, interruptible the moment the learner touches the board |
-| `load_technique_practice` | Replace the puzzle with a curated drill for one technique, behind a confirmation |
+| `load_technique_practice` | Replace the puzzle with a curated drill for one technique |
 
 ### Board and session controls
 
@@ -147,9 +148,16 @@ silently.
 |---|---|
 | `show_coordinate_ruler` | Number the grid 1–9 on both axes, so the learner can name a cell without counting |
 | `hide_coordinate_ruler` | Remove those guides |
-| `switch_difficulty` | Load a fresh puzzle at a chosen level, behind a confirmation when progress would be lost |
+| `switch_difficulty` | Load a fresh puzzle at a chosen level |
+| `restart_puzzle` | A different grid at the level the board is already on |
 | `pause_timer` | Stop the clock and cover the board, exactly as the learner's own Pause does |
 | `resume_timer` | Restart the clock from where it stopped |
+
+**The agent replaces the board without asking.** Feature 005 repealed the confirmation that used to
+gate a difficulty switch, a drill, or a restart, so that a session can be run hands-free. The
+narration contract is what remains: a replacement still cannot happen silently, and the agent's
+stated reason appears on screen as it happens. The **Disconnect** control is the learner's means of
+stopping an agent that gets it wrong.
 
 **Three rules hold across the whole surface.** The puzzle's solution never leaves the engine, so no
 tool can reveal whether a digit is correct — the agent reasons from the visible board exactly as the
@@ -238,6 +246,7 @@ dev server *is* a server. Use `npm run build && npm start`.
 | [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md) | Complete — eleven tools |
 | [003 — Agent board controls & coordinate ruler](specs/003-agent-board-controls/spec.md) | Complete — **sixteen tools**, ruler, agent spotlight |
 | [004 — Codex skill](specs/004-codex-sudoku-skill/spec.md) | Built — **awaiting its live run** against a real agent |
+| [005 — Restart, undo, prompt-free replacement](specs/005-hands-free-board-controls/spec.md) | Complete — **eighteen tools**, a Restart control, and the confirmation prompt repealed |
 
 Specifications, plans, and task breakdowns live under [`specs/`](specs/), maintained with
 [Spec Kit](https://github.com/github/spec-kit).

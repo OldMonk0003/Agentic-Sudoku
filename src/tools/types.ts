@@ -53,7 +53,6 @@ export type ErrorCode =
   | 'playback-step-failed'
   // feature 003
   | 'unknown-difficulty'
-  | 'confirmation-pending'
   | 'generation-failed'
   | 'internal-error';
 
@@ -88,11 +87,14 @@ export interface ToolDescriptor {
 /**
  * Every result carries the version, so a stale agent finds out on its next call.
  *
- * 1.0.0 -> 1.1.0 for feature 003: five tools ADDED, none renamed, none removed,
- * no schema narrowed. 002/FR-010 reserves MAJOR for exactly those three, so this
- * is a MINOR bump and an agent written against 1.0.0 keeps working.
+ * 1.0.0 -> 1.1.0 for feature 003: five tools ADDED.
+ * 1.1.0 -> 1.2.0 for feature 005: two tools ADDED (restart_puzzle, undo_move),
+ * and the `confirmation-pending` error code removed. 002/FR-010 reserves MAJOR
+ * for renaming a tool, removing a tool, or narrowing a schema -- an error code is
+ * none of those, and an agent that handled it simply never sees it again. So
+ * this stays MINOR and an agent written against 1.0.0 keeps working.
  */
-export const TOOL_SURFACE_VERSION = '1.1.0';
+export const TOOL_SURFACE_VERSION = '1.2.0';
 
 export function success(tool: string, data: unknown): ToolResult {
   return { ok: true, tool, surface_version: TOOL_SURFACE_VERSION, data };

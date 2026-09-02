@@ -8,8 +8,8 @@ import { isValidCoord, peersOf, toIndex, type Coord } from '@/engine/grid';
  * leave the highlights and beams alone" is a filter-and-splice over data other
  * tools also write to -- an invariant a future code path can forget. As a slot
  * it is an assignment, and the invariant cannot be violated. The agent store
- * already has two single-valued slots for the same reason: `toast` and
- * `confirmation`.
+ * already had single-valued slots for the same reason -- `toast`, and the
+ * confirmation feature 005 retired.
  *
  * WHY IT HAS TWO SHAPES. A single changed cell gets its row, column, and box, so
  * the learner's eye is drawn to the deduction's neighbourhood. Several changed

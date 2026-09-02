@@ -110,13 +110,15 @@ test('an agent pause leaves the board itself untouched (FR-044)', async ({ page 
   await expect(page.getByRole('button', { name: /undo/i })).toBeDisabled();
 });
 
-test('the surface is complete at sixteen tools', async ({ page }) => {
+test('the surface is complete at eighteen tools', async ({ page }) => {
   const names = await page.evaluate(async () =>
     (await document.modelContext!.getTools()).map((t) => t.name),
   );
 
-  expect(names).toHaveLength(16);
+  expect(names).toHaveLength(18);
   expect(names).toContain('pause_timer');
   expect(names).toContain('resume_timer');
-  expect(new Set(names).size).toBe(16);
+  expect(names).toContain('restart_puzzle');
+  expect(names).toContain('undo_move');
+  expect(new Set(names).size).toBe(18);
 });

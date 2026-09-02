@@ -17,7 +17,8 @@ standard. 100% client-side: no server, no database, no network request after loa
 | [001 — Core play experience](specs/001-sudoku-play-experience/) | **Complete.** 124/124 tasks, 241 unit + 90 browser tests |
 | [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/) | **Complete.** 130/132 tasks, 851 unit + 204 browser tests, 11 tools |
 | [003 — Agent board controls](specs/003-agent-board-controls/) | **Complete.** 1183 unit + 263 browser tests, **16 tools** |
-| [004 — Codex skill](specs/004-codex-sudoku-skill/) | **Built, unverified.** A Codex skill at `.agents/skills/agentic-sudoku/`; 1206 unit tests. The live run that closes SC-001 has not happened |
+| [004 — Codex skill](specs/004-codex-sudoku-skill/) | **Built, unverified.** A Codex skill at `.agents/skills/agentic-sudoku/`. The live run that closes SC-001 has not happened |
+| [005 — Restart, undo, prompt-free replacement](specs/005-hands-free-board-controls/) | **Complete.** 1283 unit + 275 browser tests, **18 tools** at `1.2.0`. The confirmation mechanism is **gone** |
 
 ## Where things stand (read this first)
 
@@ -27,18 +28,20 @@ Check it rather than trusting it — this section is the thing most likely to be
 git log --oneline -3 && git rev-parse --abbrev-ref HEAD && cat .specify/feature.json
 ```
 
-As of 2026-09-01:
+As of 2026-09-02:
 
-- **Features 002 and 003 are both on the branch `002-webmcp-agent-tutor`, and `main` is still at
-  `a5ad72f`.** Neither has been merged, and **there is no git remote configured**. Decide
-  deliberately where a new feature branches from.
-- **002's T131 is now closed by example**: 003 was committed tests-first, one commit per phase, so
-  the ordering Principle V wants is visible in history. Do the same.
-- **002's T126 remains open, and 003 made it bigger**: SC-001 is still unverified against a live
-  agent, and the untested surface has grown from 11 tools to 16.
-- **`LICENSE` (MIT) is at the repo root** as of `08b09d8`. GitHub reads it from the *default* branch
-  to fill the repo's About sidebar, so it will not show there until this branch reaches `main`.
-- The working tree was clean, the full suite green: **1183 unit, 263 browser**.
+- **Everything through feature 004 is on `main`, pushed to
+  [github.com/OldMonk0003/Agentic-Sudoku](https://github.com/OldMonk0003/Agentic-Sudoku)** (private).
+  Feature 005 is on `005-hands-free-board-controls`, cut from `main`.
+- **The site is deployed**: <https://agentic-sudoku.vercel.app>, and pushes to `main` auto-deploy.
+  The Codex skill points at it. HTTPS matters — `document.modelContext` is `[SecureContext]`-gated.
+- **002's T126 is still open, and it is now the biggest thing outstanding**: SC-001 has never been
+  verified against a live agent, and the untested surface has grown from 11 tools to **18**. Feature
+  004 built the vehicle for it; the run has not happened.
+- **`.claude/` is gitignored and untracked.** The Spec Kit slash commands come from `specify init`,
+  not from a clone. Note that untracking a tracked directory does not delete it — but a later branch
+  switch does, which is how they vanished once already.
+- Full suite green: **1283 unit, 275 browser**.
 
 ## Commands
 
@@ -78,7 +81,7 @@ engine  ←  state  ←  ui          workers → engine only
 ```
 
 **State holds THREE stores, not one.** `store.ts` (the game), `agentSession.ts` (annotations,
-explanations, spotlight, confirmation — never persisted), and `preferences.ts` (the coordinate
+explanations, spotlight — never persisted; the confirmation slot was removed by 005), and `preferences.ts` (the coordinate
 ruler — persisted under its **own** storage key, `agentic-sudoku/preferences`). The third exists
 because the ruler is neither game data nor an agent mark, and because a separate key left the
 session's `SCHEMA_VERSION` at 1 — no saved game was invalidated. See
@@ -138,6 +141,15 @@ These are easy to violate by accident and each has tests guarding it.
 - **The coordinate ruler is the one exemption from 002/FR-033** (annotations self-expire). It is a
   learner view preference, not a teaching annotation, and a guide that vanished mid-conversation
   would defeat its purpose.
+- **THE CONFIRMATION IS GONE (005).** `002/FR-053` and `003/FR-030` are **repealed**: an agent
+  replaces the board — difficulty switch, drill, or restart — with no prompt, whatever progress is on
+  it. Every producer of a prompt was agent-initiated, so the whole mechanism was retired rather than
+  left dormant. There is no undo for a replaced board and only one game is ever saved, so the
+  learner's sole protection is **Disconnect**. Do not reintroduce a prompt without an amendment.
+- **`undo_move` guards `paused` ITSELF, and must keep doing so.** `undoLast` has no status check and
+  `defineWriteTool` deliberately does not gate on status — that is what keeps `resume_timer` able to
+  leave the paused state. So nothing upstream will refuse an undo on a paused board. It is
+  **permitted on a COMPLETE board**, because the learner's own button works there.
 - **`resume_timer` is the one exemption from 002/FR-045** (no agent writes while paused). It needs
   no code: `resumeSession` already requires `status === 'paused'` and the write wrapper does not
   gate on status. Do not add a blanket paused-board guard to `defineWriteTool` — a contract test

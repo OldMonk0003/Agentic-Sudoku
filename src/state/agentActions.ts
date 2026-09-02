@@ -1,6 +1,5 @@
 import type { Coord } from '@/engine/grid';
 import type { AnnotationInput } from './annotations';
-import type { ConfirmationKind } from './confirmation';
 import type { Difficulty } from './types';
 
 /**
@@ -29,9 +28,6 @@ export type AgentAction =
   | { type: 'playbackStarted'; totalSteps: number }
   | { type: 'playbackAdvanced' }
   | { type: 'playbackEnded' }
-  | { type: 'askConfirmation'; kind: ConfirmationKind; subject: string; prompt: string; now: number; ttlMs?: number }
-  | { type: 'answerConfirmation'; id: string; accepted: boolean }
-  | { type: 'clearConfirmation' }
   | { type: 'requestPuzzle'; difficulty: Difficulty }
   | { type: 'puzzleGenerationFailed' };
 
@@ -90,16 +86,6 @@ export const playbackStarted = (payload: { totalSteps: number }): AgentAction =>
 export const playbackAdvanced = (): AgentAction => ({ type: 'playbackAdvanced' });
 export const playbackEnded = (): AgentAction => ({ type: 'playbackEnded' });
 
-export const askConfirmation = (payload: {
-  kind: ConfirmationKind;
-  subject: string;
-  prompt: string;
-  now: number;
-  ttlMs?: number;
-}): AgentAction => ({ type: 'askConfirmation', ...payload });
-export const answerConfirmation = (payload: { id: string; accepted: boolean }): AgentAction =>
-  ({ type: 'answerConfirmation', id: payload.id, accepted: payload.accepted });
-export const clearConfirmation = (): AgentAction => ({ type: 'clearConfirmation' });
 
 /**
  * The Tools -> UI seam for puzzle generation (003/R1).
@@ -126,7 +112,6 @@ export const AGENT_ACTION_TYPES: ReadonlySet<string> = new Set<AgentAction['type
   'addAnnotations', 'clearAnnotations', 'raiseSpotlight', 'pushExplanation', 'dismissExplanation',
   'showToast', 'dismissToast', 'expire', 'setReducedMotion',
   'playbackStarted', 'playbackAdvanced', 'playbackEnded',
-  'askConfirmation', 'answerConfirmation', 'clearConfirmation',
   'requestPuzzle', 'puzzleGenerationFailed',
 ]);
 
