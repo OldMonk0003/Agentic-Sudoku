@@ -259,8 +259,12 @@ switches immediately, no prompt appears at any point, and the agent's reason is 
       `undo_move` guards `paused` itself because nothing else will.
 - [X] T054 Record in `README.md` and the spec that **002/FR-053 and 003/FR-030 are repealed**, so a
       reader of those specs is not misled into thinking a confirmation still protects them.
-- [ ] T055 Confirm the commit history shows each phase's tests committed **before** its
-      implementation (Principle V), including T030–T033 preceding the removal.
+- [X] T055 Confirm the commit history shows each phase's tests committed **before** its
+      implementation (Principle V), including T030–T033 preceding the removal. **Done at three
+      commits** (`05a0426` spec, `47575c2` the eight failing tests, `e28680e` the implementation)
+      rather than one pair per phase: `switchDifficulty.ts` carries both the Phase 2 refactor and the
+      US3 repeal, so a per-phase split would have meant staging one file's content across two
+      commits. The tests-before-code ordering Principle V asks for is visible either way.
 
 ---
 
