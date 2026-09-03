@@ -13,13 +13,12 @@ Everything runs in the browser. No server, no database, no network request after
 The agent is a **tutor, not an autosolver**: every change it makes to the board must arrive with a
 one-or-two-line explanation, shown to the learner and undoable with their own Undo button.
 
-| | |
-|---|---|
-| **Live site** | [agentic-sudoku.vercel.app](https://agentic-sudoku.vercel.app) |
-| **WebMCP tools** | 18, surface version `1.2.0` |
-| **Tool implementations** | [`src/tools/tools/`](src/tools/tools/) — one file per tool |
-| **Registration** | [`src/tools/registry.ts`](src/tools/registry.ts) — the only module that touches `document` |
-| **Codex skill** | [`.agents/skills/agentic-sudoku/`](.agents/skills/agentic-sudoku/) |
+|                          |                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| **Live site**            | [agentic-sudoku.vercel.app](https://agentic-sudoku.vercel.app)                             |
+| **Tool implementations** | [`src/tools/tools/`](src/tools/tools/) — one file per WebMCP tool                          |
+| **Registration**         | [`src/tools/registry.ts`](src/tools/registry.ts) — the only module that touches `document` |
+| **Codex skill**          | [`.agents/skills/agentic-sudoku/`](.agents/skills/agentic-sudoku/)                         |
 
 ---
 
@@ -70,23 +69,20 @@ ls ~/.agents/skills/agentic-sudoku/SKILL.md
 $agentic-sudoku
 ```
 
-Use the explicit `$` form — it works even when implicit skill listing doesn't ([known Codex
-defect](https://github.com/openai/codex/issues/16012)). Codex also scans `.agents/skills` inside a
-repository, so working in this project may give you the skill for free.
+Codex also scans `.agents/skills` inside a repository, so working in this project may give you the skill for free.
 
 ### 4. What to try
 
 The board opens and the agent reports the tools it found. Then:
 
-| Ask | What should happen |
-|---|---|
-| *"What should I do next?"* | It reads the board, names a move, and explains why — from the tool descriptions alone |
-| *"Put a 4 in row 2, column 7"* | The digit appears marked as the agent's, with its reason on screen, undoable with your own Undo |
-| *"Number the grid"* | Row and column guides appear, so you can name a cell without counting |
-| *"Give me a harder one"* | Your board is replaced immediately — it does **not** ask first |
-| *"Erase that cell"* | A plain refusal — there is no erase tool; that one is yours |
+| Ask                            | What should happen                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| _"Put a 4 in row 2, column 7"_ | The digit appears marked as the agent's, with its reason on screen, undoable with your own Undo |
+| _"Number the grid"_            | Row and column guides appear, so you can name a cell without counting                           |
+| _"Give me a harder one"_       | Your board is replaced immediately — it does **not** ask first                                  |
+| _"What should I do next?"_     | It reads the board, names a move, and explains why — from the tool descriptions alone           |
 
-Park your selection on a cell and then ask it to fill a *different* one: your selection must not
+Park your selection on a cell and then ask it to fill a _different_ one: your selection must not
 move, and your next keypress must land where you left it.
 
 **The skill contains no list of those
@@ -105,53 +101,53 @@ registry.
 
 ## The WebMCP tool surface
 
-Registered on `document.modelContext`. Every tool declares a strict JSON Schema, returns a
+Following tools are registered. Every tool declares a strict JSON Schema, returns a
 structured result on both success and failure, and never throws. **Every write tool requires an
 `explanation`**, validated before the handler runs — so there is no path by which the board changes
 silently.
 
 ### Reading — changes nothing
 
-| Tool | Purpose |
-|---|---|
-| `get_board_state` | Every cell's digit, who placed it (clue / player / agent), its pencil marks, plus difficulty, elapsed time and status |
-| `check_for_conflicts` | Every cell involved in a duplicate, grouped so the agent can see which cells collide |
+| Tool                  | Purpose                                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `get_board_state`     | Every cell's digit, who placed it (clue / player / agent), its pencil marks, plus difficulty, elapsed time and status |
+| `check_for_conflicts` | Every cell involved in a duplicate, grouped so the agent can see which cells collide                                  |
 
 ### Teaching annotations — visual only, self-expiring
 
-| Tool | Purpose |
-|---|---|
-| `highlight_pattern_cells` | Mark cells in two roles: what a deduction concludes, and what justifies it |
-| `draw_constraint_beams` | Cast a ray along a row, column, or box to show a constraint |
-| `show_pattern_hint_toast` | A short coaching note beside the board |
-| `clear_visual_annotations` | Remove every highlight, beam, and note the agent placed |
+| Tool                       | Purpose                                                                    |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `highlight_pattern_cells`  | Mark cells in two roles: what a deduction concludes, and what justifies it |
+| `draw_constraint_beams`    | Cast a ray along a row, column, or box to show a constraint                |
+| `show_pattern_hint_toast`  | A short coaching note beside the board                                     |
+| `clear_visual_annotations` | Remove every highlight, beam, and note the agent placed                    |
 
 ### Changing the board — undoable, one step each
 
-| Tool | Purpose |
-|---|---|
-| `fill_cell` | Place one digit in one empty, non-clue cell |
-| `update_pencil_marks` | Set specific cells' candidates to exactly the digits listed |
-| `auto_fill_all_pencil_marks` | Pencil every empty cell with the digits still legal there |
-| `undo_move` | Take back the last change, whoever made it — exactly as the learner's Undo does |
+| Tool                         | Purpose                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `fill_cell`                  | Place one digit in one empty, non-clue cell                                     |
+| `update_pencil_marks`        | Set specific cells' candidates to exactly the digits listed                     |
+| `auto_fill_all_pencil_marks` | Pencil every empty cell with the digits still legal there                       |
+| `undo_move`                  | Take back the last change, whoever made it — exactly as the learner's Undo does |
 
 ### Guided flows
 
-| Tool | Purpose |
-|---|---|
+| Tool                          | Purpose                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `playback_deduction_sequence` | Play a walkthrough — steps in order, each explained as it happens, interruptible the moment the learner touches the board |
-| `load_technique_practice` | Replace the puzzle with a curated drill for one technique |
+| `load_technique_practice`     | Replace the puzzle with a curated drill for one technique                                                                 |
 
 ### Board and session controls
 
-| Tool | Purpose |
-|---|---|
+| Tool                    | Purpose                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------- |
 | `show_coordinate_ruler` | Number the grid 1–9 on both axes, so the learner can name a cell without counting |
-| `hide_coordinate_ruler` | Remove those guides |
-| `switch_difficulty` | Load a fresh puzzle at a chosen level |
-| `restart_puzzle` | A different grid at the level the board is already on |
-| `pause_timer` | Stop the clock and cover the board, exactly as the learner's own Pause does |
-| `resume_timer` | Restart the clock from where it stopped |
+| `hide_coordinate_ruler` | Remove those guides                                                               |
+| `switch_difficulty`     | Load a fresh puzzle at a chosen level                                             |
+| `restart_puzzle`        | A different grid at the level the board is already on                             |
+| `pause_timer`           | Stop the clock and cover the board, exactly as the learner's own Pause does       |
+| `resume_timer`          | Restart the clock from where it stopped                                           |
 
 **The agent replaces the board without asking.** Feature 005 repealed the confirmation that used to
 gate a difficulty switch, a drill, or a restart, so that a session can be run hands-free. The
@@ -177,13 +173,13 @@ engine  ←  state  ←  ui          workers → engine only
             tools                tools ↔ ui: forbidden, both directions
 ```
 
-| Layer | Path | Rules |
-|---|---|---|
-| **Engine** | `src/engine/` | Pure and deterministic. No DOM, React, storage, or timers. Runs in bare Node. Each solving technique is its own module. |
-| **State** | `src/state/` | The single source of truth. **Imports no React.** Every mutation goes through a named action; there is no other write path. |
-| **UI** | `src/ui/` | React client components. Renders state, dispatches actions. No game rules. |
-| **Tools** | `src/tools/` | The WebMCP adapter. Validates agent input, calls state actions, serialises results. No game rules, no DOM outside `registry.ts`. |
-| **Workers** | `src/workers/` | Puzzle generation off the main thread. Depends only on Engine. |
+| Layer       | Path           | Rules                                                                                                                            |
+| ----------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Engine**  | `src/engine/`  | Pure and deterministic. No DOM, React, storage, or timers. Runs in bare Node. Each solving technique is its own module.          |
+| **State**   | `src/state/`   | The single source of truth. **Imports no React.** Every mutation goes through a named action; there is no other write path.      |
+| **UI**      | `src/ui/`      | React client components. Renders state, dispatches actions. No game rules.                                                       |
+| **Tools**   | `src/tools/`   | The WebMCP adapter. Validates agent input, calls state actions, serialises results. No game rules, no DOM outside `registry.ts`. |
+| **Workers** | `src/workers/` | Puzzle generation off the main thread. Depends only on Engine.                                                                   |
 
 `app/` holds the Next.js shell and the design tokens — nothing else.
 
@@ -202,17 +198,17 @@ session (annotations and explanations, never persisted), and view preferences.
 
 ## Tools and libraries
 
-| | |
-|---|---|
-| **Framework** | Next.js 16 (App Router, static export — zero server runtime) |
-| **UI** | React 19 client components |
-| **Styling** | Tailwind CSS 4. The Japandi palette lives only in `app/globals.css`; raw hex in a component is a lint error |
-| **Icons** | Lucide React, imported one by one against the bundle budget |
-| **Puzzles** | `sudoku-gen` — its output is re-verified for a unique solution and re-rated by technique before any player sees it |
-| **Language** | TypeScript 5.9, `strict` |
-| **Unit / property / contract tests** | Vitest 4 (three projects: `node` with no DOM, `component`, `contract`), `fast-check` |
-| **Browser tests** | Playwright — e2e, accessibility (`@axe-core/playwright`), performance budgets |
-| **Lint** | ESLint 9, `typescript-eslint`, `eslint-plugin-import` for the layer boundaries |
+|                                      |                                                                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| **Framework**                        | Next.js 16 (App Router, static export — zero server runtime)                                                       |
+| **UI**                               | React 19 client components                                                                                         |
+| **Styling**                          | Tailwind CSS 4. The Japandi palette lives only in `app/globals.css`; raw hex in a component is a lint error        |
+| **Icons**                            | Lucide React, imported one by one against the bundle budget                                                        |
+| **Puzzles**                          | `sudoku-gen` — its output is re-verified for a unique solution and re-rated by technique before any player sees it |
+| **Language**                         | TypeScript 5.9, `strict`                                                                                           |
+| **Unit / property / contract tests** | Vitest 4 (three projects: `node` with no DOM, `component`, `contract`), `fast-check`                               |
+| **Browser tests**                    | Playwright — e2e, accessibility (`@axe-core/playwright`), performance budgets                                      |
+| **Lint**                             | ESLint 9, `typescript-eslint`, `eslint-plugin-import` for the layer boundaries                                     |
 
 No runtime dependency introduces a network call, a backend, or a build-time secret.
 
@@ -234,18 +230,18 @@ npm run typecheck
 ```
 
 **Verify the build the way it ships.** `npm run dev` cannot prove there is no server runtime — the
-dev server *is* a server. Use `npm run build && npm start`.
+dev server _is_ a server. Use `npm run build && npm start`.
 
 ---
 
 ## Status
 
-| Feature | State |
-|---|---|
-| [001 — Core play experience](specs/001-sudoku-play-experience/spec.md) | Complete |
-| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md) | Complete — eleven tools |
-| [003 — Agent board controls & coordinate ruler](specs/003-agent-board-controls/spec.md) | Complete — **sixteen tools**, ruler, agent spotlight |
-| [004 — Codex skill](specs/004-codex-sudoku-skill/spec.md) | Built — **awaiting its live run** against a real agent |
+| Feature                                                                                     | State                                                                                  |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [001 — Core play experience](specs/001-sudoku-play-experience/spec.md)                      | Complete                                                                               |
+| [002 — WebMCP agent tutor](specs/002-webmcp-agent-tutor/spec.md)                            | Complete — eleven tools                                                                |
+| [003 — Agent board controls & coordinate ruler](specs/003-agent-board-controls/spec.md)     | Complete — **sixteen tools**, ruler, agent spotlight                                   |
+| [004 — Codex skill](specs/004-codex-sudoku-skill/spec.md)                                   | Built — **awaiting its live run** against a real agent                                 |
 | [005 — Restart, undo, prompt-free replacement](specs/005-hands-free-board-controls/spec.md) | Complete — **eighteen tools**, a Restart control, and the confirmation prompt repealed |
 
 Specifications, plans, and task breakdowns live under [`specs/`](specs/), maintained with
